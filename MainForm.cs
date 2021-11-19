@@ -4,11 +4,13 @@ using System.Drawing;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using NLog;
 
 namespace yac8i
 {
     public partial class MainForm : Form
     {
+        Logger log = LogManager.GetCurrentClassLogger();
         private readonly Chip8VM chip8VM;
         private int x = 0;
         private int y = 0;
@@ -67,9 +69,7 @@ namespace yac8i
         }
         private void OnNewMessage(object sender, string msg)
         {
-            //TODO: Implement showing of messages (maybe some list?)
-
-            System.Console.WriteLine(msg);
+            log.Info(msg);
         }
     }
 }

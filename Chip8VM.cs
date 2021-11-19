@@ -8,10 +8,10 @@ namespace yac8i
     public class Chip8VM : IDisposable
     {
         private byte[] memory = new byte[4096];
-        private byte[] regs = new byte[16];
-        private byte[] i_reg = new byte[2];
-        private ushort pc = 0x200;
-        private byte sp = 0;
+        private byte[] registers = new byte[16];
+        private byte[] iRegister = new byte[2];
+        private ushort programCounter = 0x200;
+        private Stack<ushort> stack = new Stack<ushort>();
         //TODO: registers for sound and timer
         public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
         private List<Instruction> instructions;
@@ -29,12 +29,38 @@ namespace yac8i
             //       if they are 0, then we assume we have a match
             //       Find a way to implement this better. 
             //new Instruction() { Opcode=0x0000,Mask=0xF000},
-            new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = () => {
+            new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = args =>
+            {
                 this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
-                }},
-            new Instruction() { Opcode=0x00EE,Mask=0xFFFF},
-            new Instruction() { Opcode=0x1000,Mask=0xF000},
-            new Instruction() { Opcode=0x2000,Mask=0xF000},
+                return true;
+            }},
+            new Instruction() { Opcode=0x00EE,Mask=0xFFFF,Execute = args =>
+            {
+                ushort returnAddress;
+                if(this.stack.TryPop(out returnAddress))
+                {
+                    OnNewMessage(string.Format("Pop 0x{0:X4}",returnAddress));
+                    this.programCounter = returnAddress;
+                }
+                else
+                {
+                    OnNewMessage("Error. Stack empty while trying to return from subroutine");
+                }
+                return false;
+            }},
+            new Instruction() { Opcode=0x1000,Mask=0xF000, Execute = args =>
+            {
+                    this.programCounter = args;
+                    return false;
+            }},
+            new Instruction() { Opcode=0x2000,Mask=0xF000, Execute = args =>
+            {
+                OnNewMessage(string.Format("Push 0x{0:X4}",programCounter+2));
+                this.stack.Push((ushort)(programCounter+2));
+                this.programCounter = args;
+
+                return false;
+            }},
             new Instruction() { Opcode=0x3000,Mask=0xF000},
             new Instruction() { Opcode=0x4000,Mask=0xF000},
             new Instruction() { Opcode=0x5000,Mask=0xF000},
@@ -53,10 +79,11 @@ namespace yac8i
             new Instruction() { Opcode=0xA000,Mask=0xF000},
             new Instruction() { Opcode=0xB000,Mask=0xF000},
             new Instruction() { Opcode=0xC000,Mask=0xF000},
-            new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = () =>
+            new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = args =>
             {
                 this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Draw));
-                }},
+                return true;
+            }},
             new Instruction() { Opcode=0xE09E,Mask=0xF0FF},
             new Instruction() { Opcode=0xE0A1,Mask=0xF0FF},
             new Instruction() { Opcode=0xF007,Mask=0xF0FF},
@@ -82,7 +109,6 @@ namespace yac8i
             }
             catch (Exception ex)
             {
-                //TODO: nlog?
                 OnNewMessage($"File read error: {ex.Message}");
             }
             return loaded;
@@ -93,21 +119,29 @@ namespace yac8i
             if (loaded)
             {
 
-                while (pc < memory.Length)
+                while (programCounter < memory.Length)
                 {
-                    byte[] instructionRaw = new byte[] { memory[pc], memory[pc + 1] };
+                    byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
                     var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
+                    bool increaseProgramCounter = false;
                     if (instruction != null)
                     {
+                        ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
+                        ushort args = (ushort)(instructionValue & argsMask);
+
                         if (instruction.Execute != null)
                         {
-                            instruction.Execute();
+                            increaseProgramCounter = instruction.Execute(args);
                         }
-                        OnNewMessage(string.Format("0x{0:X4}", instructionValue));
-                        pc += 2;
+                        OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}", instructionValue, args));
+                        if (increaseProgramCounter)
+                        {
+                            programCounter += 2;
+                        }
+                        OnNewMessage(string.Format("Program counter 0x{0:X4}", programCounter));
                     }
                     else
                     {
@@ -118,11 +152,11 @@ namespace yac8i
         }
         public void Reset()
         {
-            pc = 0x200;
-            //TODO: set sp properly 
+            programCounter = 0x200;
+            stack.Clear();
             Array.Clear(memory, 0, memory.Length);
-            Array.Clear(regs, 0, regs.Length);
-            Array.Clear(i_reg, 0, i_reg.Length);
+            Array.Clear(registers, 0, registers.Length);
+            Array.Clear(iRegister, 0, iRegister.Length);
         }
         #region IDisposable
         // To detect redundant calls
