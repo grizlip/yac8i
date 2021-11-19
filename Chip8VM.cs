@@ -10,11 +10,18 @@ namespace yac8i
         private byte[] memory = new byte[4096];
         private byte[] regs = new byte[16];
         private byte[] i_reg = new byte[2];
-        private ushort pc = 0;
+        private ushort pc = 0x200;
         private byte sp = 0;
         //TODO: registers for sound and timer
+        public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
+        private List<Instruction> instructions;
+        private bool loaded = false;
+        private FileStream programSourceStreamReader;
 
-        private List<Instruction> instructions = new List<Instruction>()
+        public event EventHandler<string> NewMessage;
+        public Chip8VM()
+        {
+            instructions = new List<Instruction>()
         {
             // TODO: This instruction colides with 0x00EF and 0x00E0
             //       It happens because all three instructions beings with 0
@@ -22,7 +29,9 @@ namespace yac8i
             //       if they are 0, then we assume we have a match
             //       Find a way to implement this better. 
             //new Instruction() { Opcode=0x0000,Mask=0xF000},
-            new Instruction() { Opcode=0x00E0,Mask=0xFFFF},
+            new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = () => {
+                this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
+                }},
             new Instruction() { Opcode=0x00EE,Mask=0xFFFF},
             new Instruction() { Opcode=0x1000,Mask=0xF000},
             new Instruction() { Opcode=0x2000,Mask=0xF000},
@@ -44,7 +53,10 @@ namespace yac8i
             new Instruction() { Opcode=0xA000,Mask=0xF000},
             new Instruction() { Opcode=0xB000,Mask=0xF000},
             new Instruction() { Opcode=0xC000,Mask=0xF000},
-            new Instruction() { Opcode=0xD000,Mask=0xF000},
+            new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = () =>
+            {
+                this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Draw));
+                }},
             new Instruction() { Opcode=0xE09E,Mask=0xF0FF},
             new Instruction() { Opcode=0xE0A1,Mask=0xF0FF},
             new Instruction() { Opcode=0xF007,Mask=0xF0FF},
@@ -57,12 +69,7 @@ namespace yac8i
             new Instruction() { Opcode=0xF055,Mask=0xF0FF},
             new Instruction() { Opcode=0xF065,Mask=0xF0FF},
         };
-        private bool loaded = false;
-        private FileStream programSourceStreamReader;
 
-        public event EventHandler<string> NewMessage;
-        public Chip8VM()
-        {
             Reset();
         }
         public bool Load(string programSourceFilePath)
@@ -85,17 +92,27 @@ namespace yac8i
         {
             if (loaded)
             {
-                //TODO: Start with translation of all opcodes to readable form of instructions
-                for (int i = 0x200; i < memory.Length; i = i + 2)
+
+                while (pc < memory.Length)
                 {
-                    byte[] instructionRaw = new byte[] { memory[i], memory[i + 1] };
+                    byte[] instructionRaw = new byte[] { memory[pc], memory[pc + 1] };
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
                     var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
-
-                    OnNewMessage(string.Format("0x{0:X4}", instructionValue));
-
+                    if (instruction != null)
+                    {
+                        if (instruction.Execute != null)
+                        {
+                            instruction.Execute();
+                        }
+                        OnNewMessage(string.Format("0x{0:X4}", instructionValue));
+                        pc += 2;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }

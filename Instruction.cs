@@ -6,6 +6,6 @@ namespace yac8i
     {
         public ushort Mask { get; set; }
         public ushort Opcode { get; set; }
-        public Func<bool> Execute { get; set; }
+        public Action Execute { get; set; }
     }
 }
