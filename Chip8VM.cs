@@ -44,7 +44,7 @@ namespace yac8i
                 }
                 else
                 {
-                    OnNewMessage("Error. Stack empty while trying to return from subroutine");
+                    throw new ArgumentException("Error. Stack empty while trying to return from subroutine");
                 }
                 return false;
             }},
@@ -61,16 +61,118 @@ namespace yac8i
 
                 return false;
             }},
-            new Instruction() { Opcode=0x3000,Mask=0xF000},
-            new Instruction() { Opcode=0x4000,Mask=0xF000},
-            new Instruction() { Opcode=0x5000,Mask=0xF000},
-            new Instruction() { Opcode=0x6000,Mask=0xF000},
-            new Instruction() { Opcode=0x7000,Mask=0xF000},
-            new Instruction() { Opcode=0x8000,Mask=0xF00F},
-            new Instruction() { Opcode=0x8001,Mask=0xF00F},
-            new Instruction() { Opcode=0x8002,Mask=0xF00F},
-            new Instruction() { Opcode=0x8003,Mask=0xF00F},
-            new Instruction() { Opcode=0x8004,Mask=0xF00F},
+            new Instruction() { Opcode=0x3000,Mask=0xF000, Execute = args =>
+            {
+                int registerIndex = (args & 0x0F00) >> 8;
+                CheckRegisterIndex(registerIndex);
+                byte registerValue = registers[registerIndex];
+                byte compareToValue = (byte)(args & 0x00FF);
+                bool valuesEqual = registerValue == compareToValue;
+                OnNewMessage($"Comparing register V{registerIndex} with value {registerValue} to {compareToValue}. Result is {valuesEqual}. Args are {string.Format("0x{0:X4}",args)}");
+                if(valuesEqual)
+                {
+                    programCounter+= 4;
+                }
+                return !valuesEqual;
+            }},
+            new Instruction() { Opcode=0x4000,Mask=0xF000, Execute = args =>
+            {
+                int registerIndex = (args & 0x0F00) >> 8;
+                CheckRegisterIndex(registerIndex);
+                byte registerValue = registers[registerIndex];
+                byte compareToValue = (byte)(args & 0x00FF);
+                bool valuesEqual = registerValue == compareToValue;
+                OnNewMessage($"Comparing register V{registerIndex} with value {registerValue} to {compareToValue}. Result is {valuesEqual}. Args are {string.Format("0x{0:X4}",args)}");
+                if(!valuesEqual)
+                {
+                    programCounter+= 4;
+                }
+                return valuesEqual;
+            }},
+            new Instruction() { Opcode=0x5000,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
+                if(valuesEqual)
+                {
+                    programCounter +=4;
+                }
+                return !valuesEqual;
+            }},
+            new Instruction() { Opcode=0x6000,Mask=0xF000, Execute = args =>
+            {
+                int registerIndex  = (args & 0x0F00)>>8;
+                CheckRegisterIndex(registerIndex);
+                byte newRegisterValue = (byte)(args & 0x00FF);
+                registers[registerIndex] = newRegisterValue;
+                return true;
+            }},
+            new Instruction() { Opcode=0x7000,Mask=0xF000,Execute = args =>
+            {
+                int registerIndex  = (args & 0x0F00)>>8;
+                CheckRegisterIndex(registerIndex);
+                byte valueToAdd = (byte)(args & 0x00FF);
+                registers[registerIndex] += valueToAdd; //this will wrap if overflow happens. Not sure if that is correct behavior. 
+                return true;
+
+            }},
+            new Instruction() { Opcode=0x8000,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                registers[registerXIndex] = registers[registerYIndex];
+                return true;
+            }},
+            new Instruction() { Opcode=0x8001,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                registers[registerXIndex] = (byte)(registers[registerXIndex] | registers[registerYIndex]);
+                return true;
+            }},
+            new Instruction() { Opcode=0x8002,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                registers[registerXIndex] = (byte)(registers[registerXIndex] & registers[registerYIndex]);
+                return true;
+
+            }},
+            new Instruction() { Opcode=0x8003,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                registers[registerXIndex] = (byte)(registers[registerXIndex] ^ registers[registerYIndex]);
+                return true;
+
+            }},
+            new Instruction() { Opcode=0x8004,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                //if overflow happens, set flag
+                //TODO: find better way to check and do this?
+                if(registers[registerXIndex] + registers[registerYIndex] >255)
+                {
+                    registers[0xF] = 1;
+                }
+                registers[registerXIndex] = (byte)(registers[registerXIndex] + registers[registerYIndex]);
+
+                return true;
+            }},
             new Instruction() { Opcode=0x8005,Mask=0xF00F},
             new Instruction() { Opcode=0x8006,Mask=0xF00F},
             new Instruction() { Opcode=0x8007,Mask=0xF00F},
@@ -119,34 +221,41 @@ namespace yac8i
             if (loaded)
             {
 
-                while (programCounter < memory.Length)
+                try
                 {
-                    byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
-
-                    ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
-
-                    var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
-                    bool increaseProgramCounter = false;
-                    if (instruction != null)
+                    while (programCounter < memory.Length)
                     {
-                        ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
-                        ushort args = (ushort)(instructionValue & argsMask);
+                        byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
 
-                        if (instruction.Execute != null)
+                        ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
+
+                        var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
+                        bool increaseProgramCounter = false;
+                        if (instruction != null)
                         {
-                            increaseProgramCounter = instruction.Execute(args);
+                            ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
+                            ushort args = (ushort)(instructionValue & argsMask);
+
+                            if (instruction.Execute != null)
+                            {
+                                increaseProgramCounter = instruction.Execute(args);
+                            }
+                            OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}, Program counter: 0x{2:X4}", instructionValue, args, programCounter));
+                            if (increaseProgramCounter)
+                            {
+                                programCounter += 2;
+                            }
                         }
-                        OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}", instructionValue, args));
-                        if (increaseProgramCounter)
+                        else
                         {
-                            programCounter += 2;
+                            break;
                         }
-                        OnNewMessage(string.Format("Program counter 0x{0:X4}", programCounter));
                     }
-                    else
-                    {
-                        break;
-                    }
+                }
+                catch (Exception ex)
+                {
+                    //TODO: Add some more information about place in which program failed.
+                    OnNewMessage(ex.Message);
                 }
             }
         }
@@ -182,6 +291,15 @@ namespace yac8i
         private void OnNewMessage(string msg)
         {
             NewMessage?.Invoke(this, msg);
+        }
+
+        public void CheckRegisterIndex(int registerIndex)
+        {
+            if (registerIndex > registers.Length)
+            {
+                throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
+            }
+
         }
     }
 }
