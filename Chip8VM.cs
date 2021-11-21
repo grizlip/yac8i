@@ -9,7 +9,7 @@ namespace yac8i
     {
         private byte[] memory = new byte[4096];
         private byte[] registers = new byte[16];
-        private byte[] iRegister = new byte[2];
+        private ushort iRegister = 0;
         private ushort programCounter = 0x200;
         private Stack<ushort> stack = new Stack<ushort>();
         //TODO: registers for sound and timer
@@ -173,16 +173,88 @@ namespace yac8i
 
                 return true;
             }},
-            new Instruction() { Opcode=0x8005,Mask=0xF00F},
-            new Instruction() { Opcode=0x8006,Mask=0xF00F},
-            new Instruction() { Opcode=0x8007,Mask=0xF00F},
-            new Instruction() { Opcode=0x800E,Mask=0xF00F},
-            new Instruction() { Opcode=0x9000,Mask=0xF00F},
-            new Instruction() { Opcode=0xA000,Mask=0xF000},
+            new Instruction() { Opcode=0x8005,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                //set F register
+                registers[0xF] = (byte)(registers[registerXIndex]> registers[registerYIndex] ? 1 : 0);
+                //perform substraction (no need to worry about underflow here)
+                registers[registerXIndex] = (byte)(registers[registerXIndex] - registers[registerYIndex]);
+                return true;
+            }},
+            new Instruction() { Opcode=0x8006,Mask=0xF00F, Execute = args =>
+            {
+                //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
+                //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
+                //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
+                int registerXIndex = (args & 0x0F00)>>8;
+                //int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                //CheckRegisterIndex(registerYIndex);
+                //set VF register
+                registers[0xF] =(byte)( registers[registerXIndex] & 0x1);
+                //right shift Vx by one
+                registers[registerXIndex] = (byte)(registers[registerXIndex] >>1);
+
+                return true;
+            }},
+            new Instruction() { Opcode=0x8007,Mask=0xF00F, Execute  =args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                //set F register
+                registers[0xF] = (byte)(registers[registerXIndex]< registers[registerYIndex] ? 1 : 0);
+                //perform substraction (no need to worry about underflow here)
+                registers[registerXIndex] = (byte)(registers[registerYIndex] - registers[registerXIndex]);
+                return true;
+
+            }},
+            new Instruction() { Opcode=0x800E,Mask=0xF00F, Execute = args =>
+            {
+                //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
+                //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
+                //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
+                int registerXIndex = (args & 0x0F00)>>8;
+                //int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                //CheckRegisterIndex(registerYIndex);
+                //set VF register
+                registers[0xF] =(byte)( registers[registerXIndex] & 0x8000);
+                //right shift Vx by one
+                registers[registerXIndex] = (byte)(registers[registerXIndex] <<1);
+
+                return true;
+            
+            }},
+            new Instruction() { Opcode=0x9000,Mask=0xF00F, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
+                if(!valuesEqual)
+                {
+                    programCounter +=4;
+                }
+                return valuesEqual;
+ 
+            }},
+            new Instruction() { Opcode=0xA000,Mask=0xF000, Execute = args =>
+            {
+                iRegister = (ushort)(args & 0x0FFF);
+                return true;
+            }},
             new Instruction() { Opcode=0xB000,Mask=0xF000},
             new Instruction() { Opcode=0xC000,Mask=0xF000},
             new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = args =>
             {
+                //TODO: Implement actual drawing.
                 this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Draw));
                 return true;
             }},
@@ -262,10 +334,10 @@ namespace yac8i
         public void Reset()
         {
             programCounter = 0x200;
+            iRegister = 0;
             stack.Clear();
             Array.Clear(memory, 0, memory.Length);
             Array.Clear(registers, 0, registers.Length);
-            Array.Clear(iRegister, 0, iRegister.Length);
         }
         #region IDisposable
         // To detect redundant calls
