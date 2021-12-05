@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Diagnostics;
 
@@ -8,6 +9,24 @@ namespace yac8i;
 
 public class Chip8VM : IDisposable
 {
+
+    private byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+                                    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+                                    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+                                    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+                                    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+                                    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+                                    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+                                    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+                                    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+                                    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+                                    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+                                    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+                                    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+                                    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+                                    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+                                    0xF0, 0x80, 0xF0, 0x80, 0x80 }; // F
+
     private byte[] memory = new byte[4096];
     private byte[] registers = new byte[16];
     private ushort iRegister = 0;
@@ -21,11 +40,12 @@ public class Chip8VM : IDisposable
     private ushort pressedKeys = 0;
     private bool loaded = false;
     private FileStream programSourceStreamReader;
-
+    private bool[,] surface = new bool[64, 32];
     public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
     public event EventHandler<string> NewMessage;
     public Chip8VM()
     {
+
         ticksPerTimerDecrease = Stopwatch.Frequency / 60;
         instructions = new List<Instruction>()
         {
@@ -74,7 +94,6 @@ public class Chip8VM : IDisposable
                 byte registerValue = registers[registerIndex];
                 byte compareToValue = (byte)(args & 0x00FF);
                 bool valuesEqual = registerValue == compareToValue;
-                OnNewMessage($"Comparing register V{registerIndex} with value {registerValue} to {compareToValue}. Result is {valuesEqual}. Args are {string.Format("0x{0:X4}",args)}");
                 if(valuesEqual)
                 {
                     programCounter+= 4;
@@ -88,7 +107,6 @@ public class Chip8VM : IDisposable
                 byte registerValue = registers[registerIndex];
                 byte compareToValue = (byte)(args & 0x00FF);
                 bool valuesEqual = registerValue == compareToValue;
-                OnNewMessage($"Comparing register V{registerIndex} with value {registerValue} to {compareToValue}. Result is {valuesEqual}. Args are {string.Format("0x{0:X4}",args)}");
                 if(!valuesEqual)
                 {
                     programCounter+= 4;
@@ -284,8 +302,55 @@ public class Chip8VM : IDisposable
             }},
             new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = args =>
             {
-                //TODO: Implement actual drawing.
-                this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Draw));
+                registers[0xF] = 0;
+                int registerXIndex = (args & 0x0F00)>>8;
+                int registerYIndex = (args & 0x00F0)>>4;
+                int spriteLength = (args & 0x000F);
+                CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                byte xPosition = registers[registerXIndex];
+                byte yPosition = registers[registerYIndex];
+                byte[] sprite = memory.Skip(iRegister)
+                                      .Take(spriteLength)
+                                      .ToArray();
+                int x = (xPosition % 64);
+                int y = (yPosition % 32);
+
+                for(int i = 0; i<sprite.Length;i++)
+                {
+                        if(y < surface.GetLength(1))
+                        {
+                            BitArray spriteRow = new BitArray(new byte[] {sprite[i]});
+                            foreach(bool bit in spriteRow)
+                            {
+                                if(x < surface.GetLength(0))
+                                {
+                                    if(surface[x,y] && bit)
+                                    {
+                                        surface[x,y] = false;
+                                        registers[0xF] = 1;
+                                    }
+                                    else if(!surface[x,y] && bit)
+                                    {
+                                        surface[x,y] = true;
+                                    }
+                                    x += 1;
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+                            y += 1;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                }
+
+
+                this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Draw, surface));
                 return true;
             }},
             new Instruction() { Opcode=0xE09E,Mask=0xF0FF, Execute = args =>
@@ -352,7 +417,22 @@ public class Chip8VM : IDisposable
                 soundTimer = registers[registerXIndex] ;
                 return true;
             }},
-            new Instruction() { Opcode=0xF01E,Mask=0xF0FF},
+            new Instruction() { Opcode=0xF01E,Mask=0xF0FF, Execute= args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                CheckRegisterIndex(registerXIndex);
+                byte registerValue = registers[registerXIndex];
+                iRegister += registerValue;
+
+                //TODO: not original behavior of the instruction (at least not in relation to COSMAC VIP)
+                //      might be a good idea to put some kind of switch to decide what should happen.
+                //      more here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#fx1e-add-to-index
+                if((iRegister & 0xF000) > 0)
+                {
+                    registers[0xF] = 1;
+                }
+                return true;
+            }},
             new Instruction() { Opcode=0xF029,Mask=0xF0FF},
             new Instruction() { Opcode=0xF033,Mask=0xF0FF},
             new Instruction() { Opcode=0xF055,Mask=0xF0FF},
@@ -360,6 +440,8 @@ public class Chip8VM : IDisposable
         };
 
         Reset();
+
+        Array.Copy(font, memory, font.Length);
     }
     public bool Load(string programSourceFilePath)
     {
@@ -381,7 +463,6 @@ public class Chip8VM : IDisposable
         if (loaded)
         {
             lastTickValue = DateTime.Now.Ticks;
-
             try
             {
                 while (programCounter < memory.Length)
@@ -403,7 +484,9 @@ public class Chip8VM : IDisposable
                             HandleTimers();
                             increaseProgramCounter = instruction.Execute(args);
                         }
+
                         OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}, Program counter: 0x{2:X4}", instructionValue, args, programCounter));
+
                         if (increaseProgramCounter)
                         {
                             programCounter += 2;
@@ -430,6 +513,7 @@ public class Chip8VM : IDisposable
         soundTimer = 0;
         delayTimer = 0;
         stack.Clear();
+        Array.Clear(surface, 0, surface.Length);
         Array.Clear(memory, 0, memory.Length);
         Array.Clear(registers, 0, registers.Length);
 
@@ -512,4 +596,3 @@ public class Chip8VM : IDisposable
 
     }
 }
-

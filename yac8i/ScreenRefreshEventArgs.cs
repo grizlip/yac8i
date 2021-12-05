@@ -8,9 +8,11 @@ public enum RefreshRequest
 }
 public class ScreenRefreshEventArgs : EventArgs
 {
+    public bool[,] Surface { get; private set; }
     public RefreshRequest RequestType { get; private set; }
-    public ScreenRefreshEventArgs(RefreshRequest refreshRequest)
+    public ScreenRefreshEventArgs(RefreshRequest refreshRequest, bool[,] surface = null)
     {
-        this.RequestType = refreshRequest;
+        Surface = surface;
+        RequestType = refreshRequest;
     }
 }
