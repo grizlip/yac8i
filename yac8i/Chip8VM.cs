@@ -39,10 +39,12 @@ public class Chip8VM : IDisposable
     private List<Instruction> instructions;
     private ushort pressedKeys = 0;
     private bool loaded = false;
+    private readonly long ticksPerExecution = Stopwatch.Frequency/60;
     private FileStream programSourceStreamReader;
     private bool[,] surface = new bool[64, 32];
     public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
-    public event EventHandler<string> NewMessage;
+    public EventHandler<string> NewMessage;
+
     public Chip8VM()
     {
 
@@ -313,40 +315,45 @@ public class Chip8VM : IDisposable
                 byte[] sprite = memory.Skip(iRegister)
                                       .Take(spriteLength)
                                       .ToArray();
-                int x = (xPosition % 64);
+                int rowBegining = (xPosition % 64);
                 int y = (yPosition % 32);
 
-                for(int i = 0; i<sprite.Length;i++)
+                int x = rowBegining;
+
+                for(int i = 0; i < sprite.Length;i++)
                 {
+                        BitArray spriteRow = new BitArray(new byte[] {sprite[i]});
                         if(y < surface.GetLength(1))
                         {
-                            BitArray spriteRow = new BitArray(new byte[] {sprite[i]});
-                            foreach(bool bit in spriteRow)
+                            for(int k = spriteRow.Length - 1; k >=0 ; k--)
                             {
-                                if(x < surface.GetLength(0))
+                                var bit = spriteRow[k];
+                                if (x < surface.GetLength(0))
                                 {
-                                    if(surface[x,y] && bit)
-                                    {
-                                        surface[x,y] = false;
-                                        registers[0xF] = 1;
-                                    }
-                                    else if(!surface[x,y] && bit)
-                                    {
-                                        surface[x,y] = true;
-                                    }
-                                    x += 1;
+                                        if(surface[x,y] && bit)
+                                        {
+                                            surface[x,y] = false;
+                                            registers[0xF] = 1;
+                                        }
+                                        else if(!surface[x,y] && bit)
+                                        {
+                                            surface[x,y] = true;
+                                        }
+                                     x += 1;
                                 }
                                 else
                                 {
                                     break;
                                 }
                             }
+                            x=rowBegining;
                             y += 1;
                         }
                         else
                         {
                             break;
                         }
+
                 }
 
 
@@ -369,7 +376,7 @@ public class Chip8VM : IDisposable
                 }
                 else
                 {
-                    programCounter+=2;
+                    programCounter += 2;
                 }
                 return false;
             }},
@@ -389,7 +396,7 @@ public class Chip8VM : IDisposable
                 }
                 else
                 {
-                    programCounter+=2;
+                    programCounter += 2;
                 }
                 return false;
 
@@ -460,13 +467,17 @@ public class Chip8VM : IDisposable
 
     public void Start()
     {
+        
         if (loaded)
         {
+            Stopwatch executionStopWatch = new Stopwatch();
             lastTickValue = DateTime.Now.Ticks;
             try
             {
+                executionStopWatch.Start();
                 while (programCounter < memory.Length)
                 {
+                    long startExecutionTicks = executionStopWatch.ElapsedTicks;
                     byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
@@ -496,12 +507,23 @@ public class Chip8VM : IDisposable
                     {
                         break;
                     }
+                    //TODO: do it better (to much CPU consumption)
+                    long endExecutionTics = executionStopWatch.ElapsedTicks;
+                    while (endExecutionTics - startExecutionTicks < ticksPerExecution)
+                    {
+                         endExecutionTics = executionStopWatch.ElapsedTicks;
+                         
+                    }
                 }
             }
             catch (Exception ex)
             {
                 //TODO: Add some more information about place in which program failed.
                 OnNewMessage(ex.Message);
+            }
+            finally
+            {
+                executionStopWatch.Stop();
             }
         }
     }

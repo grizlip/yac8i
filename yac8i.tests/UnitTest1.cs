@@ -1,9 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using yac8i;
-namespace yac8i_tests;
+namespace yac8i.tests;
 
 [TestClass]
-public class Chip8VMTests
+public class UnitTest1
 {
     [TestMethod]
     public void TestMethod1()

@@ -1,0 +1,15 @@
+﻿<Window x:Class="yac8i.gui.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:yac8i.gui" mc:Ignorable="d" Title="yac8i - Yet another Chip-8 interpreter" Width="1024" Height="512">
+        <Grid>
+           <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Image Grid.Row="0" x:Name="Surface" Width="1024" Height="512" Stretch="None" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+            <!--TODO: Add list view that will display messages-->
+        </Grid>
+    </Window>
