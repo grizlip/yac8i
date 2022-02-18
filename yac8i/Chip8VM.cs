@@ -38,8 +38,9 @@ public class Chip8VM : IDisposable
     private readonly long ticksPerTimerDecrease;
     private List<Instruction> instructions;
     private ushort pressedKeys = 0;
+    private ushort? lastPressedKey = null;
     private bool loaded = false;
-    private readonly long ticksPerExecution = Stopwatch.Frequency/60;
+
     private FileStream programSourceStreamReader;
     private bool[,] surface = new bool[64, 32];
     public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
@@ -62,12 +63,11 @@ public class Chip8VM : IDisposable
                 this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
                 return true;
             }},
-            new Instruction() { Opcode=0x00EE,Mask=0xFFFF,Execute = args =>
+            new Instruction() { Opcode=0x00EE,Mask=0xFFFF, Execute = args =>
             {
                 ushort returnAddress;
                 if(this.stack.TryPop(out returnAddress))
                 {
-                    OnNewMessage(string.Format("Pop 0x{0:X4}",returnAddress));
                     this.programCounter = returnAddress;
                 }
                 else
@@ -83,7 +83,6 @@ public class Chip8VM : IDisposable
             }},
             new Instruction() { Opcode=0x2000,Mask=0xF000, Execute = args =>
             {
-                OnNewMessage(string.Format("Push 0x{0:X4}",programCounter+2));
                 this.stack.Push((ushort)(programCounter+2));
                 this.programCounter = args;
 
@@ -136,7 +135,7 @@ public class Chip8VM : IDisposable
                 registers[registerIndex] = newRegisterValue;
                 return true;
             }},
-            new Instruction() { Opcode=0x7000,Mask=0xF000,Execute = args =>
+            new Instruction() { Opcode=0x7000,Mask=0xF000, Execute = args =>
             {
                 int registerIndex  = (args & 0x0F00)>>8;
                 CheckRegisterIndex(registerIndex);
@@ -227,7 +226,7 @@ public class Chip8VM : IDisposable
 
                 return true;
             }},
-            new Instruction() { Opcode=0x8007,Mask=0xF00F, Execute  =args =>
+            new Instruction() { Opcode=0x8007,Mask=0xF00F, Execute = args =>
             {
                 int registerXIndex = (args & 0x0F00)>>8;
                 int registerYIndex = (args & 0x00F0)>>4;
@@ -409,7 +408,19 @@ public class Chip8VM : IDisposable
                 registers[registerXIndex] = delayTimer;
                 return true;
             }},
-            new Instruction() { Opcode=0xF00A,Mask=0xF0FF},
+            new Instruction() { Opcode=0xF00A,Mask=0xF0FF, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                CheckRegisterIndex(registerXIndex);
+
+                if(lastPressedKey.HasValue)
+                {
+                    registers[registerXIndex] = (byte)lastPressedKey.Value;
+                    programCounter+=2;
+                }
+
+                return false;
+            }},
             new Instruction() { Opcode=0xF015,Mask=0xF0FF, Execute = args =>
             {
                 int registerXIndex = (args & 0x0F00)>>8;
@@ -424,7 +435,7 @@ public class Chip8VM : IDisposable
                 soundTimer = registers[registerXIndex] ;
                 return true;
             }},
-            new Instruction() { Opcode=0xF01E,Mask=0xF0FF, Execute= args =>
+            new Instruction() { Opcode=0xF01E,Mask=0xF0FF, Execute = args =>
             {
                 int registerXIndex = (args & 0x0F00)>>8;
                 CheckRegisterIndex(registerXIndex);
@@ -440,10 +451,52 @@ public class Chip8VM : IDisposable
                 }
                 return true;
             }},
-            new Instruction() { Opcode=0xF029,Mask=0xF0FF},
-            new Instruction() { Opcode=0xF033,Mask=0xF0FF},
-            new Instruction() { Opcode=0xF055,Mask=0xF0FF},
-            new Instruction() { Opcode=0xF065,Mask=0xF0FF},
+            new Instruction() { Opcode=0xF029,Mask=0xF0FF, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                CheckRegisterIndex(registerXIndex);
+                byte registerValue = registers[registerXIndex];
+                iRegister = (ushort)(registerValue * 5);
+                return true;
+            }},
+            new Instruction() { Opcode=0xF033,Mask=0xF0FF, Execute = args =>
+            {
+                int registerXIndex = (args & 0x0F00)>>8;
+                CheckRegisterIndex(registerXIndex);
+                byte registerValue = registers[registerXIndex];
+
+                for(int i =2;i>=0;i--)
+                {
+                    CheckMemoryAddres(iRegister + i);
+                    memory[iRegister + i]= (byte)(registerValue % 10);
+                    registerValue = (byte)(registerValue / 10);
+                }
+
+                return true;
+            }},
+            new Instruction() { Opcode=0xF055,Mask=0xF0FF, Execute = args =>
+            {
+                int lastRegisterIndex = (args & 0x0F00)>>8;
+                CheckRegisterIndex(lastRegisterIndex);
+                
+                for(int i=0;i<=lastRegisterIndex;i++)
+                {
+                    CheckMemoryAddres(iRegister + i);
+                    memory[iRegister + i] = registers[i];
+                }
+                return true;
+            }},
+            new Instruction() { Opcode=0xF065,Mask=0xF0FF, Execute = args =>
+            {
+                int lastRegisterIndex = (args & 0x0F00)>>8;
+                CheckRegisterIndex(lastRegisterIndex);
+                for(int i=0;i<=lastRegisterIndex;i++)
+                {
+                    CheckMemoryAddres(iRegister + i);
+                    registers[i] = memory[iRegister + i];
+                }
+                return true;
+            }},
         };
 
         Reset();
@@ -467,7 +520,7 @@ public class Chip8VM : IDisposable
 
     public void Start()
     {
-        
+
         if (loaded)
         {
             Stopwatch executionStopWatch = new Stopwatch();
@@ -491,9 +544,10 @@ public class Chip8VM : IDisposable
 
                         if (instruction.Execute != null)
                         {
-                            //TODO: Timers could be updated only in instructions that depends on them
+                            //TODO: Timers could be updated only in instructions that depend on them
                             HandleTimers();
                             increaseProgramCounter = instruction.Execute(args);
+                            System.Threading.Thread.Sleep(1);
                         }
 
                         OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}, Program counter: 0x{2:X4}", instructionValue, args, programCounter));
@@ -507,13 +561,7 @@ public class Chip8VM : IDisposable
                     {
                         break;
                     }
-                    //TODO: do it better (to much CPU consumption)
-                    long endExecutionTics = executionStopWatch.ElapsedTicks;
-                    while (endExecutionTics - startExecutionTicks < ticksPerExecution)
-                    {
-                         endExecutionTics = executionStopWatch.ElapsedTicks;
-                         
-                    }
+                    
                 }
             }
             catch (Exception ex)
@@ -541,14 +589,19 @@ public class Chip8VM : IDisposable
 
     }
 
-    public void UpdateKeyDown(ushort key)
+    public void UpdateKeyState(ushort key, bool pressed)
     {
-        pressedKeys |= (ushort)(1 << key);
-    }
-
-    public void UpdateKeyUp(ushort key)
-    {
-        pressedKeys &= (ushort)~((ushort)(1 << key));
+        ushort keyBitValue = (ushort)(1 << key);
+        if (pressed)
+        {
+            lastPressedKey = null;
+            pressedKeys |= keyBitValue;
+        }
+        else
+        {
+            lastPressedKey = key;
+            pressedKeys &= (ushort)~keyBitValue;
+        }
     }
 
     #region IDisposable
@@ -607,6 +660,14 @@ public class Chip8VM : IDisposable
         }
         lastTickValue = currentTicks;
 
+    }
+
+    private void CheckMemoryAddres(int memoryAdress)
+    {
+        if (memory.Length < memoryAdress)
+        {
+            throw new ArgumentOutOfRangeException($"Address {memoryAdress} out of range.");
+        }
     }
 
     private void CheckRegisterIndex(int registerIndex)

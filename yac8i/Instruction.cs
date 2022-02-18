@@ -1,7 +1,7 @@
 using System;
 namespace yac8i;
 
-public class Instruction
+internal class Instruction
 {
     public ushort Mask { get; set; }
     public ushort Opcode { get; set; }
