@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using System.Diagnostics;
+using System.Threading;
 
 namespace yac8i;
 
@@ -45,6 +46,7 @@ public class Chip8VM : IDisposable
     private bool[,] surface = new bool[64, 32];
     public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
     public EventHandler<string> NewMessage;
+    public EventHandler<bool> BeepStatus;
 
     public Chip8VM()
     {
@@ -478,7 +480,7 @@ public class Chip8VM : IDisposable
             {
                 int lastRegisterIndex = (args & 0x0F00)>>8;
                 CheckRegisterIndex(lastRegisterIndex);
-                
+
                 for(int i=0;i<=lastRegisterIndex;i++)
                 {
                     CheckMemoryAddres(iRegister + i);
@@ -500,8 +502,6 @@ public class Chip8VM : IDisposable
         };
 
         Reset();
-
-        Array.Copy(font, memory, font.Length);
     }
     public bool Load(string programSourceFilePath)
     {
@@ -518,9 +518,12 @@ public class Chip8VM : IDisposable
         return loaded;
     }
 
-    public void Start()
+    public void Start(CancellationToken? cancelToken = null)
     {
-
+        if (cancelToken.HasValue && cancelToken.Value.IsCancellationRequested)
+        {
+            return;
+        }
         if (loaded)
         {
             Stopwatch executionStopWatch = new Stopwatch();
@@ -561,7 +564,10 @@ public class Chip8VM : IDisposable
                     {
                         break;
                     }
-                    
+                    if (cancelToken.HasValue && cancelToken.Value.IsCancellationRequested)
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -586,7 +592,7 @@ public class Chip8VM : IDisposable
         Array.Clear(surface, 0, surface.Length);
         Array.Clear(memory, 0, memory.Length);
         Array.Clear(registers, 0, registers.Length);
-
+        Array.Copy(font, memory, font.Length);
     }
 
     public void UpdateKeyState(ushort key, bool pressed)
@@ -630,33 +636,44 @@ public class Chip8VM : IDisposable
         NewMessage?.Invoke(this, msg);
     }
 
+    private void OnBeepStatus(bool status)
+    {
+        BeepStatus?.Invoke(this, status);
+    }
+
+    private static double currentDecrease = 0;
     private void HandleTimers()
     {
         long currentTicks = DateTime.Now.Ticks;
         long ticksDifference = currentTicks - lastTickValue;
-        long currentDecrease = ticksDifference * ticksPerTimerDecrease;
-        if (soundTimer > 0)
+        currentDecrease += ((double)ticksDifference / (double)ticksPerTimerDecrease) * 60;
+        if (currentDecrease >= 1)
         {
-            if (currentDecrease > soundTimer)
-            {
-                soundTimer = 0;
-            }
-            else
-            {
-                soundTimer = (byte)(soundTimer - currentDecrease);
-            }
+            
+                if (1 > soundTimer)
+                {
+                    soundTimer = 0;
+                    OnBeepStatus(false);
+                }
+                else
+                {
+                    soundTimer = (byte)(soundTimer - 1);
+                    OnBeepStatus(true);
+                }
 
-        }
-        if (delayTimer > 0)
-        {
-            if (currentDecrease > delayTimer)
+            
+            if (delayTimer > 0)
             {
-                delayTimer = 0;
+                if (1 > delayTimer)
+                {
+                    delayTimer = 0;
+                }
+                else
+                {
+                    delayTimer = (byte)(delayTimer - 1);
+                }
             }
-            else
-            {
-                delayTimer = (byte)(delayTimer - currentDecrease);
-            }
+            currentDecrease -= 1;
         }
         lastTickValue = currentTicks;
 
