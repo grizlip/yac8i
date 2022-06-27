@@ -646,7 +646,7 @@ public class Chip8VM
     {
         if (status != beepStatus)
         {
-            status = beepStatus;
+            beepStatus = status;
             BeepStatus?.Invoke(this, status);
         }
     }
