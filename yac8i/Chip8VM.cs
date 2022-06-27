@@ -59,7 +59,8 @@ public class Chip8VM
             //new Instruction() { Opcode=0x0000,Mask=0xF000},
             new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = args =>
             {
-                this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
+                ClearSurface();
+                ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
                 return true;
             }},
             new Instruction() { Opcode=0x00EE,Mask=0xFFFF, Execute = args =>
@@ -523,7 +524,7 @@ public class Chip8VM
         {
             return;
         }
-        
+
         if (loaded)
         {
             HighResolutionTimer timersHandler = null;
@@ -589,7 +590,7 @@ public class Chip8VM
             }
         }
     }
-   
+
     public void Reset()
     {
         programCounter = 0x200;
@@ -666,5 +667,17 @@ public class Chip8VM
             throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
         }
 
+    }
+
+    private void ClearSurface()
+    {
+        unsafe
+        {
+            fixed (bool* surfacePointer = &surface[0, 0])
+            {
+                var surfaceSpan = new Span<bool>(surfacePointer, 64 * 32);
+                surfaceSpan.Fill(false);
+            }
+        }
     }
 }

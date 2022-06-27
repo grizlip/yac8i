@@ -326,7 +326,7 @@ namespace yac8i.gui.sdl
                 switch (args.RequestType)
                 {
                     case RefreshRequest.Clear:
-                        vmSurface = new bool[64, 32];
+                        ClearSurface();
                         break;
                     case RefreshRequest.Draw:
                         vmSurface = args.Surface;
@@ -335,7 +335,17 @@ namespace yac8i.gui.sdl
             }
 
         }
-
+        private static void ClearSurface()
+        {
+            unsafe
+            {
+                fixed (bool* surfacePointer = &vmSurface[0, 0])
+                {
+                    var surfaceSpan = new Span<bool>(surfacePointer, 64 * 32);
+                    surfaceSpan.Fill(false);
+                }
+            }
+        }
         private static bool TryUpdatePixel(byte[] surface, int x, int y, int pitch, bool set = false)
         {
             bool result = true;
