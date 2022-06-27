@@ -3,15 +3,19 @@ using System.IO;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
-using System.Diagnostics;
 using System.Threading;
 
 namespace yac8i;
 
-public class Chip8VM : IDisposable
+public class Chip8VM
 {
 
-    private byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
+    public EventHandler<string> NewMessage;
+    public EventHandler<bool> BeepStatus;
+
+
+    private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
                                     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
                                     0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
@@ -34,27 +38,20 @@ public class Chip8VM : IDisposable
     private ushort programCounter = 0x200;
     private Stack<ushort> stack = new Stack<ushort>();
     private byte soundTimer = 0;
+    private bool beepStatus = false;
     private byte delayTimer = 0;
-    private long lastTickValue;
-    private readonly long ticksPerTimerDecrease;
     private List<Instruction> instructions;
     private ushort pressedKeys = 0;
     private ushort? lastPressedKey = null;
     private bool loaded = false;
-
-    private FileStream programSourceStreamReader;
     private bool[,] surface = new bool[64, 32];
-    public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
-    public EventHandler<string> NewMessage;
-    public EventHandler<bool> BeepStatus;
+
 
     public Chip8VM()
     {
-
-        ticksPerTimerDecrease = Stopwatch.Frequency / 60;
         instructions = new List<Instruction>()
         {
-            // TODO: This instruction colides with 0x00EF and 0x00E0
+            // TODO: This instruction collides with 0x00EF and 0x00E0
             //       It happens because all three instructions beings with 0
             //       and in case of 0x0000 we are checking only top most four bits
             //       if they are 0, then we assume we have a match
@@ -316,10 +313,10 @@ public class Chip8VM : IDisposable
                 byte[] sprite = memory.Skip(iRegister)
                                       .Take(spriteLength)
                                       .ToArray();
-                int rowBegining = (xPosition % 64);
+                int rowBeginning = (xPosition % 64);
                 int y = (yPosition % 32);
 
-                int x = rowBegining;
+                int x = rowBeginning;
 
                 for(int i = 0; i < sprite.Length;i++)
                 {
@@ -347,7 +344,7 @@ public class Chip8VM : IDisposable
                                     break;
                                 }
                             }
-                            x=rowBegining;
+                            x=rowBeginning;
                             y += 1;
                         }
                         else
@@ -469,7 +466,7 @@ public class Chip8VM : IDisposable
 
                 for(int i =2;i>=0;i--)
                 {
-                    CheckMemoryAddres(iRegister + i);
+                    CheckMemoryAdders(iRegister + i);
                     memory[iRegister + i]= (byte)(registerValue % 10);
                     registerValue = (byte)(registerValue / 10);
                 }
@@ -483,7 +480,7 @@ public class Chip8VM : IDisposable
 
                 for(int i=0;i<=lastRegisterIndex;i++)
                 {
-                    CheckMemoryAddres(iRegister + i);
+                    CheckMemoryAdders(iRegister + i);
                     memory[iRegister + i] = registers[i];
                 }
                 return true;
@@ -494,21 +491,23 @@ public class Chip8VM : IDisposable
                 CheckRegisterIndex(lastRegisterIndex);
                 for(int i=0;i<=lastRegisterIndex;i++)
                 {
-                    CheckMemoryAddres(iRegister + i);
+                    CheckMemoryAdders(iRegister + i);
                     registers[i] = memory[iRegister + i];
                 }
                 return true;
             }},
         };
-
         Reset();
     }
+
     public bool Load(string programSourceFilePath)
     {
         try
         {
-            programSourceStreamReader = new FileStream(programSourceFilePath, FileMode.Open);
-            programSourceStreamReader.Read(memory, 512, memory.Length - 512);
+            using (FileStream programSourceStreamReader = new FileStream(programSourceFilePath, FileMode.Open))
+            {
+                programSourceStreamReader.Read(memory, 512, memory.Length - 512);
+            }
             loaded = true;
         }
         catch (Exception ex)
@@ -524,16 +523,17 @@ public class Chip8VM : IDisposable
         {
             return;
         }
+        
         if (loaded)
         {
-            Stopwatch executionStopWatch = new Stopwatch();
-            lastTickValue = DateTime.Now.Ticks;
+            HighResolutionTimer timersHandler = null;
             try
             {
-                executionStopWatch.Start();
+                timersHandler = new HighResolutionTimer(1000f / 60f); //60 times per second
+                timersHandler.Elapsed += HandleTimers;
+                timersHandler.Start();
                 while (programCounter < memory.Length)
                 {
-                    long startExecutionTicks = executionStopWatch.ElapsedTicks;
                     byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
@@ -547,13 +547,13 @@ public class Chip8VM : IDisposable
 
                         if (instruction.Execute != null)
                         {
-                            //TODO: Timers could be updated only in instructions that depend on them
-                            HandleTimers();
                             increaseProgramCounter = instruction.Execute(args);
+                            //this takes around 15 - 16 ms. Check if we can do something else to control how fast
+                            //execution goes
                             System.Threading.Thread.Sleep(1);
                         }
 
-                        OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}, Program counter: 0x{2:X4}", instructionValue, args, programCounter));
+                        //OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}, Program counter: 0x{2:X4}", instructionValue, args, programCounter));
 
                         if (increaseProgramCounter)
                         {
@@ -577,13 +577,21 @@ public class Chip8VM : IDisposable
             }
             finally
             {
-                executionStopWatch.Stop();
+                if (timersHandler != null)
+                {
+                    if (timersHandler.IsRunning)
+                    {
+                        timersHandler.Stop();
+                    }
+                    timersHandler.Elapsed -= HandleTimers;
+
+                }
             }
         }
     }
+   
     public void Reset()
     {
-        lastTickValue = DateTime.Now.Ticks;
         programCounter = 0x200;
         iRegister = 0;
         soundTimer = 0;
@@ -610,26 +618,24 @@ public class Chip8VM : IDisposable
         }
     }
 
-    #region IDisposable
-    // To detect redundant calls
-    private bool _disposedValue;
-
-    public void Dispose() => Dispose(true);
-
-    // Protected implementation of Dispose pattern.
-    protected virtual void Dispose(bool disposing)
+    private void HandleTimers(object sender, HighResolutionTimerElapsedEventArgs args)
     {
-        if (!_disposedValue)
+        if (soundTimer < 1)
         {
-            if (disposing)
-            {
-                programSourceStreamReader?.Dispose();
-            }
+            soundTimer = 0;
+            OnBeepStatus(false);
+        }
+        else
+        {
+            soundTimer = (byte)(soundTimer - 1);
+            OnBeepStatus(true);
+        }
 
-            _disposedValue = true;
+        if (delayTimer > 0)
+        {
+            delayTimer = (byte)(delayTimer - 1);
         }
     }
-    #endregion
 
     private void OnNewMessage(string msg)
     {
@@ -638,52 +644,18 @@ public class Chip8VM : IDisposable
 
     private void OnBeepStatus(bool status)
     {
-        BeepStatus?.Invoke(this, status);
-    }
-
-    private static double currentDecrease = 0;
-    private void HandleTimers()
-    {
-        long currentTicks = DateTime.Now.Ticks;
-        long ticksDifference = currentTicks - lastTickValue;
-        currentDecrease += ((double)ticksDifference / (double)ticksPerTimerDecrease) * 60;
-        if (currentDecrease >= 1)
+        if (status != beepStatus)
         {
-            
-                if (1 > soundTimer)
-                {
-                    soundTimer = 0;
-                    OnBeepStatus(false);
-                }
-                else
-                {
-                    soundTimer = (byte)(soundTimer - 1);
-                    OnBeepStatus(true);
-                }
-
-            
-            if (delayTimer > 0)
-            {
-                if (1 > delayTimer)
-                {
-                    delayTimer = 0;
-                }
-                else
-                {
-                    delayTimer = (byte)(delayTimer - 1);
-                }
-            }
-            currentDecrease -= 1;
+            status = beepStatus;
+            BeepStatus?.Invoke(this, status);
         }
-        lastTickValue = currentTicks;
-
     }
 
-    private void CheckMemoryAddres(int memoryAdress)
+    private void CheckMemoryAdders(int memoryAddress)
     {
-        if (memory.Length < memoryAdress)
+        if (memory.Length < memoryAddress)
         {
-            throw new ArgumentOutOfRangeException($"Address {memoryAdress} out of range.");
+            throw new ArgumentOutOfRangeException($"Address {memoryAddress} out of range.");
         }
     }
 
