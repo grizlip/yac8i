@@ -59,7 +59,7 @@ public class Chip8VM
             //new Instruction() { Opcode=0x0000,Mask=0xF000},
             new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = args =>
             {
-                ClearSurface();
+                Array.Clear(surface);
                 ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
                 return true;
             }},
@@ -598,9 +598,9 @@ public class Chip8VM
         soundTimer = 0;
         delayTimer = 0;
         stack.Clear();
-        Array.Clear(surface, 0, surface.Length);
-        Array.Clear(memory, 0, memory.Length);
-        Array.Clear(registers, 0, registers.Length);
+        Array.Clear(surface);
+        Array.Clear(memory);
+        Array.Clear(registers);
         Array.Copy(font, memory, font.Length);
     }
 
@@ -667,17 +667,5 @@ public class Chip8VM
             throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
         }
 
-    }
-
-    private void ClearSurface()
-    {
-        unsafe
-        {
-            fixed (bool* surfacePointer = &surface[0, 0])
-            {
-                var surfaceSpan = new Span<bool>(surfacePointer, 64 * 32);
-                surfaceSpan.Fill(false);
-            }
-        }
     }
 }
