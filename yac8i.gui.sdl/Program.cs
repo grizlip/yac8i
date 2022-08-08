@@ -15,6 +15,7 @@ namespace yac8i.gui.sdl
         private const int PIXEL_SIZE = 16;
         private static bool[,] vmSurface = new bool[64, 32];
         private static object vmSurfaceLock = new object();
+        private static bool vmSurfaceDirty = false;
         private static Chip8VM vm = new Chip8VM();
         private static CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private static Task? vmTask = null;
@@ -122,7 +123,7 @@ namespace yac8i.gui.sdl
                 Console.WriteLine($"There was an issue creating the window. {SDL.SDL_GetError()}");
             }
 
-            // Creates a new SDL hardware renderer.
+            // Creates a new SDL hardware renderer. 
             var rendererPtr = SDL.SDL_CreateRenderer(windowPtr,
                                                   -1,
                                                   SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED);
@@ -168,7 +169,7 @@ namespace yac8i.gui.sdl
             var cancelToken = cancellationTokenSource.Token;
             vm.Reset();
             vm.Load(file);
-            vmTask = Task.Run(() => vm.Start(cancelToken), cancelToken);
+            vmTask = vm.StartAsync(cancelToken);
 
         }
 
@@ -241,7 +242,7 @@ namespace yac8i.gui.sdl
             while (running)
             {
                 // Check to see if there are any events and continue to do so until the queue is empty.
-                while (SDL.SDL_PollEvent(out SDL.SDL_Event e) == 1)
+                while (SDL.SDL_PollEvent(out SDL.SDL_Event e) != 0)
                 {
                     switch (e.type)
                     {
@@ -282,34 +283,37 @@ namespace yac8i.gui.sdl
                             }
                     }
                 }
-
-                lock (vmSurfaceLock)
+                if (vmSurfaceDirty)
                 {
-                    for (int i = 0; i < vmSurface.GetLength(0); i++)
+                    lock (vmSurfaceLock)
                     {
-                        for (int j = 0; j < vmSurface.GetLength(1); j++)
+                        for (int i = 0; i < vmSurface.GetLength(0); i++)
                         {
-                            if (!TryUpdatePixel(surface, i, j, pitch, vmSurface[i, j]))
+                            for (int j = 0; j < vmSurface.GetLength(1); j++)
                             {
-                                running = false;
-                                Console.WriteLine($"Failed to update pixel {i} {j}");
+                                if (!TryUpdatePixel(surface, i, j, pitch, vmSurface[i, j]))
+                                {
+                                    running = false;
+                                    Console.WriteLine($"Failed to update pixel {i} {j}");
+                                }
                             }
                         }
                     }
-                }
 
-                //Update window.
-                unsafe
-                {
-                    fixed (byte* surfacePtr = surface)
+                    //Update window.
+                    unsafe
                     {
-                        SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
-                        SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
-                        SDL.SDL_RenderPresent(rendererPtr);
+                        fixed (byte* surfacePtr = surface)
+                        {
+                            SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
+                            SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
+                            SDL.SDL_RenderPresent(rendererPtr);
+                        }
                     }
+
+
                 }
-                //to not kill CPU
-                System.Threading.Thread.Sleep(10);
+                vm.TickAutoResetEvent.WaitOne(200);
             }
         }
 
@@ -332,10 +336,11 @@ namespace yac8i.gui.sdl
                         vmSurface = args.Surface;
                         break;
                 }
+                vmSurfaceDirty = true;
             }
 
         }
- 
+
         private static bool TryUpdatePixel(byte[] surface, int x, int y, int pitch, bool set = false)
         {
             bool result = true;

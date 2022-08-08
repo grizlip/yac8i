@@ -4,17 +4,17 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace yac8i;
 
 public class Chip8VM
 {
-
     public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
     public EventHandler<string> NewMessage;
     public EventHandler<bool> BeepStatus;
 
-
+    public AutoResetEvent TickAutoResetEvent = new AutoResetEvent(false);
     private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
                                     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -45,7 +45,7 @@ public class Chip8VM
     private ushort? lastPressedKey = null;
     private bool loaded = false;
     private bool[,] surface = new bool[64, 32];
-
+    private CancellationToken? ct;
 
     public Chip8VM()
     {
@@ -518,57 +518,22 @@ public class Chip8VM
         return loaded;
     }
 
-    public void Start(CancellationToken? cancelToken = null)
+    public async Task StartAsync(CancellationToken cancelToken)
     {
-        if (cancelToken.HasValue && cancelToken.Value.IsCancellationRequested)
-        {
-            return;
-        }
+        ct = cancelToken;
 
         if (loaded)
         {
-            HighResolutionTimer timersHandler = null;
+            HighResolutionTimer executionHandler = null;
             try
             {
-                timersHandler = new HighResolutionTimer(1000f / 60f); //60 times per second
-                timersHandler.Elapsed += HandleTimers;
-                timersHandler.Start();
-                while (programCounter < memory.Length)
+                executionHandler = new HighResolutionTimer(1000f / 60f); //60 times per second
+                executionHandler.Elapsed += Execute;
+                executionHandler.Start();
+
+                while (executionHandler.IsRunning)
                 {
-                    byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
-
-                    ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
-
-                    var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
-                    bool increaseProgramCounter = false;
-                    if (instruction != null)
-                    {
-                        ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
-                        ushort args = (ushort)(instructionValue & argsMask);
-
-                        if (instruction.Execute != null)
-                        {
-                            increaseProgramCounter = instruction.Execute(args);
-                            //this takes around 15 - 16 ms. Check if we can do something else to control how fast
-                            //execution goes
-                            System.Threading.Thread.Sleep(1);
-                        }
-
-                        //OnNewMessage(string.Format("Instruction: 0x{0:X4}, Args: 0x{1:X4}, Program counter: 0x{2:X4}", instructionValue, args, programCounter));
-
-                        if (increaseProgramCounter)
-                        {
-                            programCounter += 2;
-                        }
-                    }
-                    else
-                    {
-                        break;
-                    }
-                    if (cancelToken.HasValue && cancelToken.Value.IsCancellationRequested)
-                    {
-                        break;
-                    }
+                    await Task.Delay(200, cancelToken);
                 }
             }
             catch (Exception ex)
@@ -578,16 +543,16 @@ public class Chip8VM
             }
             finally
             {
-                if (timersHandler != null)
+                if (executionHandler != null)
                 {
-                    if (timersHandler.IsRunning)
+                    if (executionHandler.IsRunning)
                     {
-                        timersHandler.Stop();
+                        executionHandler.Stop();
                     }
-                    timersHandler.Elapsed -= HandleTimers;
-
+                    executionHandler.Elapsed -= Execute;
                 }
             }
+
         }
     }
 
@@ -607,6 +572,7 @@ public class Chip8VM
     public void UpdateKeyState(ushort key, bool pressed)
     {
         ushort keyBitValue = (ushort)(1 << key);
+
         if (pressed)
         {
             lastPressedKey = null;
@@ -619,7 +585,20 @@ public class Chip8VM
         }
     }
 
-    private void HandleTimers(object sender, HighResolutionTimerElapsedEventArgs args)
+    private void Execute(object sender, HighResolutionTimerElapsedEventArgs args)
+    {
+        try
+        {
+            HandleExecute(sender as HighResolutionTimer);
+            HandleTimers();
+        }
+        finally
+        {
+            TickAutoResetEvent.Set();
+        }
+    }
+
+    private void HandleTimers()
     {
         if (soundTimer < 1)
         {
@@ -635,6 +614,54 @@ public class Chip8VM
         if (delayTimer > 0)
         {
             delayTimer = (byte)(delayTimer - 1);
+        }
+    }
+
+    private void HandleExecute(HighResolutionTimer timer)
+    {
+        try
+        {
+            if (programCounter < memory.Length)
+            {
+                byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
+
+                ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
+
+                var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
+                bool increaseProgramCounter = false;
+                if (instruction != null)
+                {
+                    ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
+                    ushort args = (ushort)(instructionValue & argsMask);
+
+                    if (instruction.Execute != null)
+                    {
+                        increaseProgramCounter = instruction.Execute(args);
+
+                    }
+
+                    if (increaseProgramCounter)
+                    {
+                        programCounter += 2;
+                    }
+                }
+                else
+                {
+                    timer.Stop();
+                }
+                if (ct.HasValue && ct.Value.IsCancellationRequested)
+                {
+                    timer.Stop();
+                }
+            }
+            else
+            {
+                timer.Stop();
+            }
+        }
+        catch (Exception ex)
+        {
+            OnNewMessage(ex.Message);
         }
     }
 
