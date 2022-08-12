@@ -10,7 +10,16 @@ namespace yac8i;
 
 public class Chip8VM
 {
-    public EventHandler<ScreenRefreshEventArgs> ScreenRefresh;
+    public bool NewFrameReady { get; private set; }
+
+    public bool[,] Surface
+    {
+        get
+        {
+            NewFrameReady = false;
+            return this.surface;
+        }
+    }
     public EventHandler<string> NewMessage;
     public EventHandler<bool> BeepStatus;
 
@@ -60,7 +69,7 @@ public class Chip8VM
             new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = args =>
             {
                 Array.Clear(surface);
-                ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Clear));
+                NewFrameReady = true;
                 return true;
             }},
             new Instruction() { Opcode=0x00EE,Mask=0xFFFF, Execute = args =>
@@ -355,8 +364,7 @@ public class Chip8VM
 
                 }
 
-
-                this.ScreenRefresh?.Invoke(this,new ScreenRefreshEventArgs(RefreshRequest.Draw, surface));
+                NewFrameReady = true;
                 return true;
             }},
             new Instruction() { Opcode=0xE09E,Mask=0xF0FF, Execute = args =>
@@ -525,11 +533,16 @@ public class Chip8VM
         if (loaded)
         {
             HighResolutionTimer executionHandler = null;
+            HighResolutionTimer timersHandler = null;
             try
             {
-                executionHandler = new HighResolutionTimer(1000f / 60f); //60 times per second
-                executionHandler.Elapsed += Execute;
+                executionHandler = new HighResolutionTimer(1f); // as fast as possible
+                executionHandler.Elapsed += HandleExecute;
                 executionHandler.Start();
+
+                timersHandler = new HighResolutionTimer(1000f / 60f); //60 times per second
+                timersHandler.Elapsed += HandleTimers;
+                timersHandler.Start();
 
                 while (executionHandler.IsRunning)
                 {
@@ -549,7 +562,16 @@ public class Chip8VM
                     {
                         executionHandler.Stop();
                     }
-                    executionHandler.Elapsed -= Execute;
+                    executionHandler.Elapsed -= HandleExecute;
+                }
+
+                if (timersHandler != null)
+                {
+                    if (timersHandler.IsRunning)
+                    {
+                        timersHandler.Stop();
+                    }
+                    timersHandler.Elapsed -= HandleTimers;
                 }
             }
 
@@ -585,42 +607,11 @@ public class Chip8VM
         }
     }
 
-    private void Execute(object sender, HighResolutionTimerElapsedEventArgs args)
+    private void HandleExecute(object sender, HighResolutionTimerElapsedEventArgs a)
     {
         try
         {
-            HandleExecute(sender as HighResolutionTimer);
-            HandleTimers();
-        }
-        finally
-        {
-            TickAutoResetEvent.Set();
-        }
-    }
-
-    private void HandleTimers()
-    {
-        if (soundTimer < 1)
-        {
-            soundTimer = 0;
-            OnBeepStatus(false);
-        }
-        else
-        {
-            soundTimer = (byte)(soundTimer - 1);
-            OnBeepStatus(true);
-        }
-
-        if (delayTimer > 0)
-        {
-            delayTimer = (byte)(delayTimer - 1);
-        }
-    }
-
-    private void HandleExecute(HighResolutionTimer timer)
-    {
-        try
-        {
+            var timer = sender as HighResolutionTimer;
             if (programCounter < memory.Length)
             {
                 byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
@@ -662,6 +653,32 @@ public class Chip8VM
         catch (Exception ex)
         {
             OnNewMessage(ex.Message);
+        }
+    }
+
+    private void HandleTimers(object sender, HighResolutionTimerElapsedEventArgs args)
+    {
+        try
+        {
+            if (soundTimer < 1)
+            {
+                soundTimer = 0;
+                OnBeepStatus(false);
+            }
+            else
+            {
+                soundTimer = (byte)(soundTimer - 1);
+                OnBeepStatus(true);
+            }
+
+            if (delayTimer > 0)
+            {
+                delayTimer = (byte)(delayTimer - 1);
+            }
+        }
+        finally
+        {
+            TickAutoResetEvent.Set();
         }
     }
 

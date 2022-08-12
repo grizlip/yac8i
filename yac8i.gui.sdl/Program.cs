@@ -62,7 +62,6 @@ namespace yac8i.gui.sdl
 
         static void Main(string[] args)
         {
-            vm.ScreenRefresh += OnScreenRefresh;
             // Initilizes SDL.
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO) < 0)
             {
@@ -283,8 +282,9 @@ namespace yac8i.gui.sdl
                             }
                     }
                 }
-                if (vmSurfaceDirty)
+                if (vm.NewFrameReady)
                 {
+                    vmSurface = vm.Surface;
                     lock (vmSurfaceLock)
                     {
                         for (int i = 0; i < vmSurface.GetLength(0); i++)
@@ -310,35 +310,14 @@ namespace yac8i.gui.sdl
                             SDL.SDL_RenderPresent(rendererPtr);
                         }
                     }
-
-
                 }
                 vm.TickAutoResetEvent.WaitOne(200);
             }
         }
 
-
         private static void OnBeepStatusChanged(object? sender, bool status)
         {
             SDL.SDL_PauseAudioDevice(soundDeviceId, status ? 0 : 1);
-        }
-
-        private static void OnScreenRefresh(object? sender, ScreenRefreshEventArgs args)
-        {
-            lock (vmSurfaceLock)
-            {
-                switch (args.RequestType)
-                {
-                    case RefreshRequest.Clear:
-                        Array.Clear(vmSurface);
-                        break;
-                    case RefreshRequest.Draw:
-                        vmSurface = args.Surface;
-                        break;
-                }
-                vmSurfaceDirty = true;
-            }
-
         }
 
         private static bool TryUpdatePixel(byte[] surface, int x, int y, int pitch, bool set = false)
