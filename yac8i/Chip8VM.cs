@@ -185,6 +185,7 @@ public class Chip8VM
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] | registers[registerYIndex]);
+                registers[0xF] = 0;
                 return true;
             }},
             new Instruction() { Opcode=0x8002,Mask=0xF00F, Execute = args =>
@@ -194,6 +195,7 @@ public class Chip8VM
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] & registers[registerYIndex]);
+                registers[0xF] = 0;
                 return true;
 
             }},
@@ -204,6 +206,7 @@ public class Chip8VM
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] ^ registers[registerYIndex]);
+                registers[0xF] = 0;
                 return true;
 
             }},
@@ -247,9 +250,10 @@ public class Chip8VM
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
                 //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
                 int registerXIndex = (args & 0x0F00)>>8;
-                //int registerYIndex = (args & 0x00F0)>>4;
+                int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
-                //CheckRegisterIndex(registerYIndex);
+                CheckRegisterIndex(registerYIndex);
+                registers[registerXIndex] = registers[registerYIndex];
                 byte xValue = registers[registerXIndex];
                 
                 //right shift Vx by one
@@ -265,7 +269,7 @@ public class Chip8VM
                 int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
-                
+
                 byte xValue = registers[registerXIndex];
                 byte yValue = registers[registerYIndex];
                 //perform substraction (no need to worry about underflow here)
@@ -282,6 +286,8 @@ public class Chip8VM
                 int registerXIndex = (args & 0x0F00)>>8;
                 int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
+                CheckRegisterIndex(registerYIndex);
+                registers[registerXIndex] = registers[registerYIndex];
                 byte xValue = registers[registerXIndex];
                 
                 //left shift Vx by one
@@ -315,12 +321,10 @@ public class Chip8VM
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
                 //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
-                int registerXIndex = (args & 0x0F00)>>8;
-                CheckRegisterIndex(registerXIndex);
-                ushort jumpOffset = registers[registerXIndex];
+                ushort jumpOffset = registers[0];
                 ushort jumpBase = (ushort)(args & 0x0FFF);
 
-                programCounter += (ushort)(jumpBase + jumpOffset);
+                programCounter = (ushort)(jumpBase + jumpOffset);
 
                 return false;
             }},
@@ -517,6 +521,7 @@ public class Chip8VM
                     CheckMemoryAdders(iRegister + i);
                     memory[iRegister + i] = registers[i];
                 }
+                iRegister += (ushort)(lastRegisterIndex +1);
                 return true;
             }},
             new Instruction() { Opcode=0xF065,Mask=0xF0FF, Execute = args =>
@@ -528,6 +533,7 @@ public class Chip8VM
                     CheckMemoryAdders(iRegister + i);
                     registers[i] = memory[iRegister + i];
                 }
+                iRegister += (ushort)(lastRegisterIndex +1);
                 return true;
             }},
         };
