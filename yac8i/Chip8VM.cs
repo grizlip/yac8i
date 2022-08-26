@@ -20,10 +20,13 @@ public class Chip8VM
             return this.surface;
         }
     }
+
     public EventHandler<string> NewMessage;
+
     public EventHandler<bool> BeepStatus;
 
     public AutoResetEvent TickAutoResetEvent = new AutoResetEvent(false);
+
     private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
                                     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -42,18 +45,31 @@ public class Chip8VM
                                     0xF0, 0x80, 0xF0, 0x80, 0x80 }; // F
 
     private byte[] memory = new byte[4096];
+
     private byte[] registers = new byte[16];
+
     private ushort iRegister = 0;
+
     private ushort programCounter = 0x200;
+
     private Stack<ushort> stack = new Stack<ushort>();
+
     private byte soundTimer = 0;
+
     private bool beepStatus = false;
+
     private byte delayTimer = 0;
+
     private List<Instruction> instructions;
+
     private ushort pressedKeys = 0;
+
     private ushort? lastPressedKey = null;
+
     private bool loaded = false;
+
     private bool[,] surface = new bool[64, 32];
+
     private CancellationToken? ct;
 
     public Chip8VM()
@@ -197,14 +213,19 @@ public class Chip8VM
                 int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
-                //if overflow happens, set flag
+                byte xValue = registers[registerXIndex];
+                byte yValue = registers[registerYIndex];
+                registers[registerXIndex] = (byte)(xValue + yValue);
+                
                 //TODO: find better way to check and do this?
-                if(registers[registerXIndex] + registers[registerYIndex] >255)
+                if(xValue + yValue >255)
                 {
                     registers[0xF] = 1;
                 }
-                registers[registerXIndex] = (byte)(registers[registerXIndex] + registers[registerYIndex]);
-
+                else
+                {
+                    registers[0xF] = 0;
+                }
                 return true;
             }},
             new Instruction() { Opcode=0x8005,Mask=0xF00F, Execute = args =>
@@ -213,10 +234,11 @@ public class Chip8VM
                 int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
-                //set F register
-                registers[0xF] = (byte)(registers[registerXIndex]> registers[registerYIndex] ? 1 : 0);
+                byte xValue = registers[registerXIndex];
+                byte yValue = registers[registerYIndex];
                 //perform substraction (no need to worry about underflow here)
-                registers[registerXIndex] = (byte)(registers[registerXIndex] - registers[registerYIndex]);
+                registers[registerXIndex] = (byte)(xValue - yValue);
+                registers[0xF] = (byte)(xValue>yValue ? 1 : 0);
                 return true;
             }},
             new Instruction() { Opcode=0x8006,Mask=0xF00F, Execute = args =>
@@ -228,10 +250,12 @@ public class Chip8VM
                 //int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
                 //CheckRegisterIndex(registerYIndex);
-                //set VF register
-                registers[0xF] =(byte)( registers[registerXIndex] & 0x1);
+                byte xValue = registers[registerXIndex];
+                
                 //right shift Vx by one
-                registers[registerXIndex] = (byte)(registers[registerXIndex] >>1);
+                registers[registerXIndex] = (byte)(xValue >>1);
+                //set VF register
+                registers[0xF] =(byte)(xValue & 0x1);
 
                 return true;
             }},
@@ -241,10 +265,12 @@ public class Chip8VM
                 int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
-                //set F register
-                registers[0xF] = (byte)(registers[registerXIndex]< registers[registerYIndex] ? 1 : 0);
+                
+                byte xValue = registers[registerXIndex];
+                byte yValue = registers[registerYIndex];
                 //perform substraction (no need to worry about underflow here)
-                registers[registerXIndex] = (byte)(registers[registerYIndex] - registers[registerXIndex]);
+                registers[registerXIndex] = (byte)(yValue- xValue);
+                registers[0xF] = (byte)(xValue<yValue ? 1 : 0);
                 return true;
 
             }},
@@ -254,14 +280,13 @@ public class Chip8VM
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
                 //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
                 int registerXIndex = (args & 0x0F00)>>8;
-                //int registerYIndex = (args & 0x00F0)>>4;
+                int registerYIndex = (args & 0x00F0)>>4;
                 CheckRegisterIndex(registerXIndex);
-                //CheckRegisterIndex(registerYIndex);
-                //set VF register
-                registers[0xF] =(byte)( registers[registerXIndex] & 0x8000);
-                //right shift Vx by one
-                registers[registerXIndex] = (byte)(registers[registerXIndex] <<1);
-
+                byte xValue = registers[registerXIndex];
+                
+                //left shift Vx by one
+                registers[registerXIndex] = (byte)(xValue <<1);
+                registers[0xF] =(byte)((xValue & 0x80) >>7);
                 return true;
 
             }},
