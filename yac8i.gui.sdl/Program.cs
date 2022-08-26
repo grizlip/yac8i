@@ -15,7 +15,6 @@ namespace yac8i.gui.sdl
         private const int PIXEL_SIZE = 16;
         private static bool[,] vmSurface = new bool[64, 32];
         private static object vmSurfaceLock = new object();
-        private static bool vmSurfaceDirty = false;
         private static Chip8VM vm = new Chip8VM();
         private static CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private static Task? vmTask = null;
@@ -62,6 +61,10 @@ namespace yac8i.gui.sdl
 
         static void Main(string[] args)
         {
+            vm.NewMessage += (s, a) =>
+            {
+                Console.WriteLine(a);
+            };
             // Initilizes SDL.
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO) < 0)
             {
@@ -241,7 +244,7 @@ namespace yac8i.gui.sdl
             while (running)
             {
                 // Check to see if there are any events and continue to do so until the queue is empty.
-                while (SDL.SDL_PollEvent(out SDL.SDL_Event e) != 0)
+                while (SDL.SDL_PollEvent(out SDL.SDL_Event e) > 0)
                 {
                     switch (e.type)
                     {
@@ -282,35 +285,34 @@ namespace yac8i.gui.sdl
                             }
                     }
                 }
-                if (vm.NewFrameReady)
+
+                vmSurface = vm.Surface;
+                lock (vmSurfaceLock)
                 {
-                    vmSurface = vm.Surface;
-                    lock (vmSurfaceLock)
+                    for (int i = 0; i < vmSurface.GetLength(0); i++)
                     {
-                        for (int i = 0; i < vmSurface.GetLength(0); i++)
+                        for (int j = 0; j < vmSurface.GetLength(1); j++)
                         {
-                            for (int j = 0; j < vmSurface.GetLength(1); j++)
+                            if (!TryUpdatePixel(surface, i, j, pitch, vmSurface[i, j]))
                             {
-                                if (!TryUpdatePixel(surface, i, j, pitch, vmSurface[i, j]))
-                                {
-                                    running = false;
-                                    Console.WriteLine($"Failed to update pixel {i} {j}");
-                                }
+                                running = false;
+                                Console.WriteLine($"Failed to update pixel {i} {j}");
                             }
                         }
                     }
+                }
 
-                    //Update window.
-                    unsafe
+                //Update window.
+                unsafe
+                {
+                    fixed (byte* surfacePtr = surface)
                     {
-                        fixed (byte* surfacePtr = surface)
-                        {
-                            SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
-                            SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
-                            SDL.SDL_RenderPresent(rendererPtr);
-                        }
+                        SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
+                        SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
+                        SDL.SDL_RenderPresent(rendererPtr);
                     }
                 }
+
                 vm.TickAutoResetEvent.WaitOne(200);
             }
         }
@@ -338,8 +340,24 @@ namespace yac8i.gui.sdl
                         int currentIndex = currentLineIndex + (b * 4);
                         surface[currentIndex] = 0; //blue
                         surface[currentIndex + 1] = 0;  //green
-                        surface[currentIndex + 2] = (byte)(set ? 0xff : 0);//red
-                        surface[currentIndex + 3] = 0; //alpha
+                        if (set)
+                        {
+                            surface[currentIndex + 2] = (byte)0xff;//red
+                            surface[currentIndex + 3] = 0; //alpha
+                        }
+                        else
+                        {
+                            if (surface[currentIndex + 3] > 0)
+                            {
+                                surface[currentIndex + 3] = 0;
+                                surface[currentIndex + 2] = 0;
+                            }
+                            else
+                            {
+                                surface[currentIndex + 3] = (byte)0x7f;
+                            }
+                        }
+
                     }
                 }
             }

@@ -10,13 +10,10 @@ namespace yac8i;
 
 public class Chip8VM
 {
-    public bool NewFrameReady { get; private set; }
-
     public bool[,] Surface
     {
         get
         {
-            NewFrameReady = false;
             return this.surface;
         }
     }
@@ -85,7 +82,6 @@ public class Chip8VM
             new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = args =>
             {
                 Array.Clear(surface);
-                NewFrameReady = true;
                 return true;
             }},
             new Instruction() { Opcode=0x00EE,Mask=0xFFFF, Execute = args =>
@@ -354,7 +350,6 @@ public class Chip8VM
                                       .ToArray();
                 int rowBeginning = (xPosition % 64);
                 int y = (yPosition % 32);
-
                 int x = rowBeginning;
 
                 for(int i = 0; i < sprite.Length;i++)
@@ -362,9 +357,9 @@ public class Chip8VM
                         BitArray spriteRow = new BitArray(new byte[] {sprite[i]});
                         if(y < surface.GetLength(1))
                         {
-                            for(int k = spriteRow.Length - 1; k >=0 ; k--)
+                            for(int rowBitIndex = spriteRow.Length - 1; rowBitIndex >=0 ; rowBitIndex--)
                             {
-                                var bit = spriteRow[k];
+                                var bit = spriteRow[rowBitIndex];
                                 if (x < surface.GetLength(0))
                                 {
                                         if(surface[x,y] && bit)
@@ -392,9 +387,7 @@ public class Chip8VM
                         }
 
                 }
-
-                NewFrameReady = true;
-                return true;
+               return true;
             }},
             new Instruction() { Opcode=0xE09E,Mask=0xF0FF, Execute = args =>
             {
