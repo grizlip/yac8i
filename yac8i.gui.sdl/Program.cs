@@ -87,7 +87,7 @@ namespace yac8i.gui.sdl
             if (soundDevicesNames.Any())
             {
                 //TODO: make it possible to choose sound device
-                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[1], 0, ref want, out have, 0);
+                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[0], 0, ref want, out have, 0);
 
                 if (soundDeviceId == 0)
                 {

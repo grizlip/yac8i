@@ -643,7 +643,6 @@ public class Chip8VM
                 ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
                 var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
-                bool increaseProgramCounter = false;
                 if (instruction != null)
                 {
                     ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
@@ -651,13 +650,11 @@ public class Chip8VM
 
                     if (instruction.Execute != null)
                     {
-                        increaseProgramCounter = instruction.Execute(args);
+                        if(instruction.Execute(args))
+                        {
+                              programCounter += 2;
+                        }
 
-                    }
-
-                    if (increaseProgramCounter)
-                    {
-                        programCounter += 2;
                     }
                 }
                 else
