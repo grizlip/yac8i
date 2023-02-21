@@ -530,6 +530,12 @@ public class Chip8VM
                 return true;
             }},
         };
+
+        if (instructions.Count != instructions.DistinctBy(item => item.Opcode).Count())
+        {
+            throw new InvalidOperationException("Duplicates found in instruction set.");
+        }
+
         Reset();
     }
 
@@ -642,26 +648,18 @@ public class Chip8VM
 
                 ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
-                var instruction = instructions.SingleOrDefault(item => (instructionValue & item.Mask) == item.Opcode);
-                if (instruction != null)
+                var instruction = instructions.Find(item => (instructionValue & item.Mask) == item.Opcode);
+                if (instruction != null && !(ct.HasValue && ct.Value.IsCancellationRequested))
                 {
                     ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
                     ushort args = (ushort)(instructionValue & argsMask);
 
-                    if (instruction.Execute != null)
+                    if (instruction.Execute != null && instruction.Execute(args))
                     {
-                        if(instruction.Execute(args))
-                        {
-                              programCounter += 2;
-                        }
-
+                        programCounter += 2;
                     }
                 }
                 else
-                {
-                    timer.Stop();
-                }
-                if (ct.HasValue && ct.Value.IsCancellationRequested)
                 {
                     timer.Stop();
                 }
