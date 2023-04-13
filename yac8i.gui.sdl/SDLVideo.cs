@@ -68,6 +68,87 @@ namespace yac8i.gui.sdl
             SDL.SDL_DestroyWindow(windowPtr);
         }
 
+        public void LoadAndExecute(string file)
+        {
+            if (!vmTask?.IsCompleted ?? false)
+            {
+                cancellationTokenSource.Cancel();
+                vmTask?.Wait();
+            }
+            cancellationTokenSource.Dispose();
+            cancellationTokenSource = new CancellationTokenSource();
+            var cancelToken = cancellationTokenSource.Token;
+            vm.StopAndReset();
+            vm.Load(file);
+            vmTask = vm.StartAsync(cancelToken);
+        }
+
+        public void MainLoop()
+        {
+            // Main loop for the program
+            while (running)
+            {
+                // Check to see if there are any events and continue to do so until the queue is empty.
+                while (SDL.SDL_PollEvent(out SDL.SDL_Event e) > 0)
+                {
+                    switch (e.type)
+                    {
+                        case SDL.SDL_EventType.SDL_QUIT:
+                            running = false;
+                            break;
+                        case SDL.SDL_EventType.SDL_KEYDOWN:
+                            {
+                                if (keysMapping.TryGetValue(e.key.keysym.sym, out ushort keyValue))
+                                {
+                                    vm.UpdateKeyState(keyValue, true);
+                                }
+                                break;
+                            }
+                        case SDL.SDL_EventType.SDL_KEYUP:
+                            {
+                                if (keysMapping.TryGetValue(e.key.keysym.sym, out ushort keyValue))
+                                {
+                                    vm.UpdateKeyState(keyValue, false);
+                                }
+                                break;
+                            }
+                        case SDL.SDL_EventType.SDL_DROPFILE:
+                            {
+                                string s = SDL.UTF8_ToManaged(e.drop.file, true);
+                                LoadAndExecute(s);
+                                break;
+                            }
+                    }
+                }
+
+                vmSurface = vm.Surface;
+                for (int i = 0; i < vmSurface.GetLength(0); i++)
+                {
+                    for (int j = 0; j < vmSurface.GetLength(1); j++)
+                    {
+                        if (!TryUpdatePixel(surface, i, j, pitch, vmSurface[i, j]))
+                        {
+                            running = false;
+                            Console.WriteLine($"Failed to update pixel {i} {j}");
+                        }
+                    }
+                }
+
+                //Update window.
+                unsafe
+                {
+                    fixed (byte* surfacePtr = surface)
+                    {
+                        SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
+                        SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
+                        SDL.SDL_RenderPresent(rendererPtr);
+                    }
+                }
+
+                vm.TickAutoResetEvent.WaitOne(200);
+            }
+        }
+
         private void GetWindowTexturePtrAndPitch(IntPtr windowPtr, IntPtr rendererPtr, out int pitch, out IntPtr windowTexturePtr)
         {
             pitch = 0;
@@ -107,72 +188,6 @@ namespace yac8i.gui.sdl
             else
             {
                 Console.WriteLine($"There was an issue reading window surface.  {SDL.SDL_GetError()}");
-            }
-        }
-
-        public void MainLoop()
-        {
-            // Main loop for the program
-            while (running)
-            {
-                // Check to see if there are any events and continue to do so until the queue is empty.
-                while (SDL.SDL_PollEvent(out SDL.SDL_Event e) > 0)
-                {
-                    switch (e.type)
-                    {
-                        case SDL.SDL_EventType.SDL_QUIT:
-                            running = false;
-                            break;
-                        case SDL.SDL_EventType.SDL_KEYDOWN:
-                            {
-                                if (keysMapping.TryGetValue(e.key.keysym.sym, out ushort keyValue))
-                                {
-                                    vm.UpdateKeyState(keyValue, true);
-                                }
-                                break;
-                            }
-                        case SDL.SDL_EventType.SDL_KEYUP:
-                            {
-                                if (keysMapping.TryGetValue(e.key.keysym.sym, out ushort keyValue))
-                                {
-                                    vm.UpdateKeyState(keyValue, false);
-                                }
-                                break;
-                            }
-                        case SDL.SDL_EventType.SDL_DROPFILE:
-                            {
-                                string s = SDL.UTF8_ToManaged(e.drop.file, true);
-                                StartVm(s);
-                                break;
-                            }
-                    }
-                }
-
-                vmSurface = vm.Surface;
-                for (int i = 0; i < vmSurface.GetLength(0); i++)
-                {
-                    for (int j = 0; j < vmSurface.GetLength(1); j++)
-                    {
-                        if (!TryUpdatePixel(surface, i, j, pitch, vmSurface[i, j]))
-                        {
-                            running = false;
-                            Console.WriteLine($"Failed to update pixel {i} {j}");
-                        }
-                    }
-                }
-
-                //Update window.
-                unsafe
-                {
-                    fixed (byte* surfacePtr = surface)
-                    {
-                        SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
-                        SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
-                        SDL.SDL_RenderPresent(rendererPtr);
-                    }
-                }
-
-                vm.TickAutoResetEvent.WaitOne(200);
             }
         }
 
@@ -217,20 +232,6 @@ namespace yac8i.gui.sdl
             }
             return result;
         }
-        
-        private void StartVm(string file)
-        {
-            if (!vmTask?.IsCompleted ?? false)
-            {
-                cancellationTokenSource.Cancel();
-                vmTask?.Wait();
-            }
-            cancellationTokenSource.Dispose();
-            cancellationTokenSource = new CancellationTokenSource();
-            var cancelToken = cancellationTokenSource.Token;
-            vm.Reset();
-            vm.Load(file);
-            vmTask = vm.StartAsync(cancelToken);
-        }
+
     }
 }

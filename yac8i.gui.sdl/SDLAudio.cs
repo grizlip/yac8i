@@ -12,7 +12,7 @@ namespace yac8i.gui.sdl
         private ushort samples;
         private int frequency;
         private byte channels;
-        private uint soundDeviceId;
+        private uint soundDeviceId = 0;
         private Chip8VM vm;
 
         public SDLAudio(Chip8VM vm)
@@ -37,6 +37,12 @@ namespace yac8i.gui.sdl
         public void SetupAudio(string deviceName)
         {
 
+            if (soundDeviceId != 0)
+            {
+                vm.BeepStatus -= OnBeepStatusChanged;
+                SDL.SDL_CloseAudioDevice(soundDeviceId);
+            }
+            
             if (SDL.SDL_WasInit(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO) > 0)
             {
                 SDL.SDL_AudioSpec want = new SDL.SDL_AudioSpec();

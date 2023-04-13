@@ -1,5 +1,6 @@
 //based on https://jsayers.dev/category/c-sdl-tutorial-series/
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System;
 using SDL2;
 
@@ -10,7 +11,7 @@ namespace yac8i.gui.sdl
         private Chip8VM vm;
 
         private SDLAudio sdlAudio;
-        private SDLVideo sdlVideo;
+        private SDLVideo? sdlVideo;
 
         public SDLFront(Chip8VM vm)
         {
@@ -70,9 +71,9 @@ namespace yac8i.gui.sdl
             sdlAudio.SetupAudio(name);
         }
 
-        public void Start()
+        public async Task Start()
         {
-            sdlVideo.MainLoop();
+            await Task.Run(() => sdlVideo.MainLoop());
         }
 
         public void Dispose()

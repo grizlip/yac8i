@@ -5,11 +5,15 @@ using System.Collections;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 
 namespace yac8i;
 
 public class Chip8VM
 {
+
+    public event EventHandler<int> ProgramLoaded;
+
     public bool[,] Surface
     {
         get
@@ -23,6 +27,10 @@ public class Chip8VM
     public EventHandler<bool> BeepStatus;
 
     public AutoResetEvent TickAutoResetEvent = new AutoResetEvent(false);
+
+    public ReadOnlyCollection<byte> Memory => new ReadOnlyCollection<byte>(memory);
+
+    public ReadOnlyCollection<byte> Registers => new ReadOnlyCollection<byte>(registers);
 
     private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -40,6 +48,9 @@ public class Chip8VM
                                     0xE0, 0x90, 0x90, 0x90, 0xE0, // D
                                     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
                                     0xF0, 0x80, 0xF0, 0x80, 0x80 }; // F
+    private HighResolutionTimer executionHandler = null;
+
+    private HighResolutionTimer timersHandler = null;
 
     private byte[] memory = new byte[4096];
 
@@ -536,18 +547,20 @@ public class Chip8VM
             throw new InvalidOperationException("Duplicates found in instruction set.");
         }
 
-        Reset();
+        StopAndReset();
     }
 
     public bool Load(string programSourceFilePath)
     {
         try
         {
+            int bytesCount = 0;
             using (FileStream programSourceStreamReader = new FileStream(programSourceFilePath, FileMode.Open))
             {
-                programSourceStreamReader.Read(memory, 512, memory.Length - 512);
+                bytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
             }
             loaded = true;
+            ProgramLoaded?.Invoke(this, bytesCount);
         }
         catch (Exception ex)
         {
@@ -558,12 +571,15 @@ public class Chip8VM
 
     public async Task StartAsync(CancellationToken cancelToken)
     {
+        if(ct.HasValue)
+        {
+            StopAndReset();
+        }
         ct = cancelToken;
 
         if (loaded)
         {
-            HighResolutionTimer executionHandler = null;
-            HighResolutionTimer timersHandler = null;
+
             try
             {
                 executionHandler = new HighResolutionTimer(1f); // as fast as possible
@@ -586,30 +602,31 @@ public class Chip8VM
             }
             finally
             {
-                if (executionHandler != null)
-                {
-                    if (executionHandler.IsRunning)
-                    {
-                        executionHandler.Stop();
-                    }
-                    executionHandler.Elapsed -= HandleExecute;
-                }
-
-                if (timersHandler != null)
-                {
-                    if (timersHandler.IsRunning)
-                    {
-                        timersHandler.Stop();
-                    }
-                    timersHandler.Elapsed -= HandleTimers;
-                }
+                StopAndReset();
             }
-
         }
     }
 
-    public void Reset()
+
+    public void StopAndReset()
     {
+        if (executionHandler != null)
+        {
+            if (executionHandler.IsRunning)
+            {
+                executionHandler.Stop();
+            }
+            executionHandler.Elapsed -= HandleExecute;
+        }
+
+        if (timersHandler != null)
+        {
+            if (timersHandler.IsRunning)
+            {
+                timersHandler.Stop();
+            }
+            timersHandler.Elapsed -= HandleTimers;
+        }
         programCounter = 0x200;
         iRegister = 0;
         soundTimer = 0;
@@ -619,6 +636,7 @@ public class Chip8VM
         Array.Clear(memory);
         Array.Clear(registers);
         Array.Copy(font, memory, font.Length);
+        ct = null;
     }
 
     public void UpdateKeyState(ushort key, bool pressed)
@@ -675,19 +693,19 @@ public class Chip8VM
         }
     }
 
-    private void HandleTimers(object sender, HighResolutionTimerElapsedEventArgs args)
+    private async void HandleTimers(object sender, HighResolutionTimerElapsedEventArgs args)
     {
         try
         {
             if (soundTimer < 1)
             {
                 soundTimer = 0;
-                OnBeepStatus(false);
+                await OnBeepStatus(false);
             }
             else
             {
                 soundTimer = (byte)(soundTimer - 1);
-                OnBeepStatus(true);
+                await OnBeepStatus(true);
             }
 
             if (delayTimer > 0)
@@ -706,12 +724,12 @@ public class Chip8VM
         NewMessage?.Invoke(this, msg);
     }
 
-    private void OnBeepStatus(bool status)
+    private async Task OnBeepStatus(bool status)
     {
         if (status != beepStatus)
         {
             beepStatus = status;
-            BeepStatus?.Invoke(this, status);
+            await Task.Run(() => BeepStatus?.Invoke(this, status));
         }
     }
 

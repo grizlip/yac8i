@@ -1,0 +1,38 @@
+<Window xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="yac8i.gui.sdl.MainWindow" Title="YAC8I"
+    xmlns:local="clr-namespace:yac8i.gui.sdl.MVVM;assembly=yac8i.gui.sdl" CanResize="false">
+    <Window.Resources>
+        <local:OpcodeToHexConverter x:Key="hexConverter"/>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="500" />
+        </Grid.ColumnDefinitions>
+
+        <Label Grid.Row="0" Content="Audio devices:" />
+        <ComboBox Grid.Row="1" x:Name="audioDevices" Items="{Binding AudioDevices}" SelectedItem="{Binding SelectedSoundDeviceName}"/>
+        <Border Grid.Row="2" Grid.Column="0" Background="LightBlue" BorderBrush="Black" BorderThickness="2" Padding="15">
+            <StackPanel>
+                <Button Content="Load" Command="{Binding LoadCommand}"/>
+                <Button Content="Start" Command="{Binding StartCommand}"/>
+                <Button Content="Stop" Command="{Binding StopCommand}"/>
+                <Button Content="Pause/Go" Command="{Binding PauseGoCommand}"/>
+            </StackPanel>
+        </Border>
+        <Label Grid.Row="0" Grid.Column="1" Content="Hex" />
+        <DataGrid Grid.Row="1" Grid.Column="1" Grid.RowSpan="2" Items="{Binding Instructions}" AutoGenerateColumns="False">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Current" Binding="{Binding PointsToProgramCounter}"/>
+                <DataGridTextColumn Header="Opcode" Binding="{Binding Opcode, Converter={StaticResource hexConverter}}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
