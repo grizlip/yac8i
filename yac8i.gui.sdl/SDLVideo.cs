@@ -1,8 +1,6 @@
 using System;
 using SDL2;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Runtime.InteropServices;
 
 namespace yac8i.gui.sdl
@@ -17,8 +15,6 @@ namespace yac8i.gui.sdl
         private IntPtr windowTexturePtr;
         private IntPtr rendererPtr;
         private int pitch;
-        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        private Task? vmTask = null;
         private Chip8VM vm;
         private static Dictionary<SDL.SDL_Keycode, ushort> keysMapping = new Dictionary<SDL.SDL_Keycode, ushort>()
             {
@@ -62,25 +58,9 @@ namespace yac8i.gui.sdl
         public void Dispose()
         {
             running = false;
-            cancellationTokenSource.Cancel();
-            vmTask?.Wait();
+
             SDL.SDL_DestroyRenderer(rendererPtr);
             SDL.SDL_DestroyWindow(windowPtr);
-        }
-
-        public void LoadAndExecute(string file)
-        {
-            if (!vmTask?.IsCompleted ?? false)
-            {
-                cancellationTokenSource.Cancel();
-                vmTask?.Wait();
-            }
-            cancellationTokenSource.Dispose();
-            cancellationTokenSource = new CancellationTokenSource();
-            var cancelToken = cancellationTokenSource.Token;
-            vm.StopAndReset();
-            vm.Load(file);
-            vmTask = vm.StartAsync(cancelToken);
         }
 
         public void MainLoop()
@@ -110,12 +90,6 @@ namespace yac8i.gui.sdl
                                 {
                                     vm.UpdateKeyState(keyValue, false);
                                 }
-                                break;
-                            }
-                        case SDL.SDL_EventType.SDL_DROPFILE:
-                            {
-                                string s = SDL.UTF8_ToManaged(e.drop.file, true);
-                                LoadAndExecute(s);
                                 break;
                             }
                     }

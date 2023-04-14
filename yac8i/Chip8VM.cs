@@ -747,6 +747,5 @@ public class Chip8VM
         {
             throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
         }
-
     }
 }

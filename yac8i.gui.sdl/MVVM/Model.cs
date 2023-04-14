@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace yac8i.gui.sdl.MVVM
 {
-    public class Model
+    public class Model : IDisposable
     {
         public event EventHandler ProgramLoaded;
         public IReadOnlyCollection<ushort> Opcodes => opcodes;
@@ -15,6 +16,8 @@ namespace yac8i.gui.sdl.MVVM
 
         private readonly List<ushort> opcodes = new List<ushort>();
         private readonly List<byte> registers = new List<byte>();
+        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private Task? vmTask = null;
         private readonly Chip8VM vm;
 
         public Model(Chip8VM vm)
@@ -44,9 +47,29 @@ namespace yac8i.gui.sdl.MVVM
             registers.AddRange(vm.Registers);
         }
 
-        public void LoadAndExecute(string romFile)
+        public void LoadAndExecute(string file)
         {
-          //TODO
+            if (!vmTask?.IsCompleted ?? false)
+            {
+                cancellationTokenSource.Cancel();
+                vmTask?.Wait();
+            }
+            cancellationTokenSource.Dispose();
+            cancellationTokenSource = new CancellationTokenSource();
+            vm.StopAndReset();
+            vm.Load(file);
+            vmTask = vm.StartAsync(cancellationTokenSource.Token);
+        }
+
+        public void Dispose()
+        {
+            if (!vmTask?.IsCompleted ?? false)
+            {
+                cancellationTokenSource.Cancel();
+                vmTask?.Wait();
+            }
+            cancellationTokenSource.Dispose();
+            vmTask?.Dispose();
         }
 
         private void OnProgramLoaded(object sender, int bytesCount)
