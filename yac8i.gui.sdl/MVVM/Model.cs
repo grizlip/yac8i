@@ -11,13 +11,27 @@ namespace yac8i.gui.sdl.MVVM
         public IReadOnlyCollection<ushort> Opcodes => opcodes;
 
         public IReadOnlyCollection<byte> Registers => registers;
+        public ushort IRegister
+        {
+            get
+            {
+                return vm.IRegister;
+            }
+        }
 
-        public ushort ProgramCounter { get; private set; }
+        public ushort ProgramCounter
+        {
+            get
+            {
+                return vm.ProgramCounter;
+            }
+        }
 
         private readonly List<ushort> opcodes = new List<ushort>();
         private readonly List<byte> registers = new List<byte>();
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private Task? vmTask = null;
+        private string lastRomFile;
         private readonly Chip8VM vm;
 
         public Model(Chip8VM vm)
@@ -26,7 +40,6 @@ namespace yac8i.gui.sdl.MVVM
             this.vm.ProgramLoaded += OnProgramLoaded;
             UpdateOpcodes();
             UpdateRegisters();
-
         }
 
         public void UpdateOpcodes(int bytesCount = 0)
@@ -47,8 +60,9 @@ namespace yac8i.gui.sdl.MVVM
             registers.AddRange(vm.Registers);
         }
 
-        public void LoadAndExecute(string file)
+        public void Load(string file)
         {
+            lastRomFile = file;
             if (!vmTask?.IsCompleted ?? false)
             {
                 cancellationTokenSource.Cancel();
@@ -58,7 +72,31 @@ namespace yac8i.gui.sdl.MVVM
             cancellationTokenSource = new CancellationTokenSource();
             vm.StopAndReset();
             vm.Load(file);
-            vmTask = vm.StartAsync(cancellationTokenSource.Token);
+           
+        }
+
+        public void Start()
+        {
+            if (!vmTask?.IsCompleted ?? false)
+            {
+               return;
+            }
+             vmTask = vm.StartAsync(cancellationTokenSource.Token);
+        }
+
+        public void Pause()
+        {
+            vm.Puase();
+        }
+
+        public void Go()
+        {
+            vm.Go();
+        }
+
+        public void Reset()
+        {
+            Load(lastRomFile);
         }
 
         public void Dispose()

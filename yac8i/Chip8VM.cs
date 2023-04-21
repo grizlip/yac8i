@@ -31,6 +31,9 @@ public class Chip8VM
     public ReadOnlyCollection<byte> Memory => new ReadOnlyCollection<byte>(memory);
 
     public ReadOnlyCollection<byte> Registers => new ReadOnlyCollection<byte>(registers);
+    public ushort IRegister { get; private set; } = 0;
+
+    public ushort ProgramCounter { get; private set; } = 0x200;
 
     private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -48,17 +51,13 @@ public class Chip8VM
                                     0xE0, 0x90, 0x90, 0x90, 0xE0, // D
                                     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
                                     0xF0, 0x80, 0xF0, 0x80, 0x80 }; // F
-    private HighResolutionTimer executionHandler = null;
 
-    private HighResolutionTimer timersHandler = null;
+
+    private HighResolutionTimer tickTimer = null;
 
     private byte[] memory = new byte[4096];
 
     private byte[] registers = new byte[16];
-
-    private ushort iRegister = 0;
-
-    private ushort programCounter = 0x200;
 
     private Stack<ushort> stack = new Stack<ushort>();
 
@@ -80,6 +79,8 @@ public class Chip8VM
 
     private CancellationToken? ct;
 
+    private int instructionsPerFrame = 20;
+
     public Chip8VM()
     {
         instructions = new List<Instruction>()
@@ -100,7 +101,7 @@ public class Chip8VM
                 ushort returnAddress;
                 if(this.stack.TryPop(out returnAddress))
                 {
-                    this.programCounter = returnAddress;
+                    this.ProgramCounter = returnAddress;
                 }
                 else
                 {
@@ -110,13 +111,13 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x1000,Mask=0xF000, Execute = args =>
             {
-                    this.programCounter = args;
+                    this.ProgramCounter = args;
                     return false;
             }},
             new Instruction() { Opcode=0x2000,Mask=0xF000, Execute = args =>
             {
-                this.stack.Push((ushort)(programCounter+2));
-                this.programCounter = args;
+                this.stack.Push((ushort)(ProgramCounter+2));
+                this.ProgramCounter = args;
 
                 return false;
             }},
@@ -129,7 +130,7 @@ public class Chip8VM
                 bool valuesEqual = registerValue == compareToValue;
                 if(valuesEqual)
                 {
-                    programCounter+= 4;
+                    ProgramCounter+= 4;
                 }
                 return !valuesEqual;
             }},
@@ -142,7 +143,7 @@ public class Chip8VM
                 bool valuesEqual = registerValue == compareToValue;
                 if(!valuesEqual)
                 {
-                    programCounter+= 4;
+                    ProgramCounter+= 4;
                 }
                 return valuesEqual;
             }},
@@ -155,7 +156,7 @@ public class Chip8VM
                 bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
                 if(valuesEqual)
                 {
-                    programCounter +=4;
+                    ProgramCounter +=4;
                 }
                 return !valuesEqual;
             }},
@@ -312,14 +313,14 @@ public class Chip8VM
                 bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
                 if(!valuesEqual)
                 {
-                    programCounter +=4;
+                    ProgramCounter +=4;
                 }
                 return valuesEqual;
 
             }},
             new Instruction() { Opcode=0xA000,Mask=0xF000, Execute = args =>
             {
-                iRegister = (ushort)(args & 0x0FFF);
+                IRegister = (ushort)(args & 0x0FFF);
                 return true;
             }},
             new Instruction() { Opcode=0xB000,Mask=0xF000, Execute = args =>
@@ -331,7 +332,7 @@ public class Chip8VM
                 ushort jumpOffset = registers[0];
                 ushort jumpBase = (ushort)(args & 0x0FFF);
 
-                programCounter = (ushort)(jumpBase + jumpOffset);
+                ProgramCounter = (ushort)(jumpBase + jumpOffset);
 
                 return false;
             }},
@@ -356,7 +357,7 @@ public class Chip8VM
                 CheckRegisterIndex(registerYIndex);
                 byte xPosition = registers[registerXIndex];
                 byte yPosition = registers[registerYIndex];
-                byte[] sprite = memory.Skip(iRegister)
+                byte[] sprite = memory.Skip(IRegister)
                                       .Take(spriteLength)
                                       .ToArray();
                 int rowBeginning = (xPosition % 64);
@@ -412,11 +413,11 @@ public class Chip8VM
 
                 if((pressedKeys & (ushort)(1 << keyIndex)) > 0)
                 {
-                    programCounter += 4;
+                    ProgramCounter += 4;
                 }
                 else
                 {
-                    programCounter += 2;
+                    ProgramCounter += 2;
                 }
                 return false;
             }},
@@ -432,11 +433,11 @@ public class Chip8VM
 
                 if((pressedKeys & (ushort)(1 << keyIndex)) == 0)
                 {
-                    programCounter += 4;
+                    ProgramCounter += 4;
                 }
                 else
                 {
-                    programCounter += 2;
+                    ProgramCounter += 2;
                 }
                 return false;
 
@@ -457,7 +458,7 @@ public class Chip8VM
                 if(lastPressedKey.HasValue)
                 {
                     registers[registerXIndex] = (byte)lastPressedKey.Value;
-                    programCounter+=2;
+                    ProgramCounter+=2;
                 }
 
                 return false;
@@ -481,12 +482,12 @@ public class Chip8VM
                 int registerXIndex = (args & 0x0F00)>>8;
                 CheckRegisterIndex(registerXIndex);
                 byte registerValue = registers[registerXIndex];
-                iRegister += registerValue;
+                IRegister += registerValue;
 
                 //TODO: not original behavior of the instruction (at least not in relation to COSMAC VIP)
                 //      might be a good idea to put some kind of switch to decide what should happen.
                 //      more here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#fx1e-add-to-index
-                if((iRegister & 0xF000) > 0)
+                if((IRegister & 0xF000) > 0)
                 {
                     registers[0xF] = 1;
                 }
@@ -497,7 +498,7 @@ public class Chip8VM
                 int registerXIndex = (args & 0x0F00)>>8;
                 CheckRegisterIndex(registerXIndex);
                 byte registerValue = registers[registerXIndex];
-                iRegister = (ushort)(registerValue * 5);
+                IRegister = (ushort)(registerValue * 5);
                 return true;
             }},
             new Instruction() { Opcode=0xF033,Mask=0xF0FF, Execute = args =>
@@ -508,8 +509,8 @@ public class Chip8VM
 
                 for(int i =2;i>=0;i--)
                 {
-                    CheckMemoryAdders(iRegister + i);
-                    memory[iRegister + i]= (byte)(registerValue % 10);
+                    CheckMemoryAdders(IRegister + i);
+                    memory[IRegister + i]= (byte)(registerValue % 10);
                     registerValue = (byte)(registerValue / 10);
                 }
 
@@ -522,10 +523,10 @@ public class Chip8VM
 
                 for(int i=0;i<=lastRegisterIndex;i++)
                 {
-                    CheckMemoryAdders(iRegister + i);
-                    memory[iRegister + i] = registers[i];
+                    CheckMemoryAdders(IRegister + i);
+                    memory[IRegister + i] = registers[i];
                 }
-                iRegister += (ushort)(lastRegisterIndex +1);
+                IRegister += (ushort)(lastRegisterIndex +1);
                 return true;
             }},
             new Instruction() { Opcode=0xF065,Mask=0xF0FF, Execute = args =>
@@ -534,10 +535,10 @@ public class Chip8VM
                 CheckRegisterIndex(lastRegisterIndex);
                 for(int i=0;i<=lastRegisterIndex;i++)
                 {
-                    CheckMemoryAdders(iRegister + i);
-                    registers[i] = memory[iRegister + i];
+                    CheckMemoryAdders(IRegister + i);
+                    registers[i] = memory[IRegister + i];
                 }
-                iRegister += (ushort)(lastRegisterIndex +1);
+                IRegister += (ushort)(lastRegisterIndex +1);
                 return true;
             }},
         };
@@ -571,7 +572,7 @@ public class Chip8VM
 
     public async Task StartAsync(CancellationToken cancelToken)
     {
-        if(ct.HasValue)
+        if (ct.HasValue)
         {
             StopAndReset();
         }
@@ -582,15 +583,11 @@ public class Chip8VM
 
             try
             {
-                executionHandler = new HighResolutionTimer(1f); // as fast as possible
-                executionHandler.Elapsed += HandleExecute;
-                executionHandler.Start();
+                tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second
+                tickTimer.Elapsed += OnTick;
+                tickTimer.Start();
 
-                timersHandler = new HighResolutionTimer(1000f / 60f); //60 times per second
-                timersHandler.Elapsed += HandleTimers;
-                timersHandler.Start();
-
-                while (executionHandler.IsRunning)
+                while (tickTimer.IsRunning)
                 {
                     await Task.Delay(200, cancelToken);
                 }
@@ -607,28 +604,29 @@ public class Chip8VM
         }
     }
 
+    public void Puase()
+    {
+        tickTimer.Elapsed -= OnTick;
+    }
+
+    public void Go()
+    {
+        tickTimer.Elapsed += OnTick;
+    }
 
     public void StopAndReset()
     {
-        if (executionHandler != null)
+    
+        if (tickTimer != null)
         {
-            if (executionHandler.IsRunning)
+            if (tickTimer.IsRunning)
             {
-                executionHandler.Stop();
+                tickTimer.Stop();
             }
-            executionHandler.Elapsed -= HandleExecute;
+            tickTimer.Elapsed -= OnTick;
         }
-
-        if (timersHandler != null)
-        {
-            if (timersHandler.IsRunning)
-            {
-                timersHandler.Stop();
-            }
-            timersHandler.Elapsed -= HandleTimers;
-        }
-        programCounter = 0x200;
-        iRegister = 0;
+        ProgramCounter = 0x200;
+        IRegister = 0;
         soundTimer = 0;
         delayTimer = 0;
         stack.Clear();
@@ -655,14 +653,13 @@ public class Chip8VM
         }
     }
 
-    private void HandleExecute(object sender, HighResolutionTimerElapsedEventArgs a)
+    private void ExecuteInstruction()
     {
         try
         {
-            var timer = sender as HighResolutionTimer;
-            if (programCounter < memory.Length)
+            if (ProgramCounter < memory.Length)
             {
-                byte[] instructionRaw = new byte[] { memory[programCounter], memory[programCounter + 1] };
+                byte[] instructionRaw = new byte[] { memory[ProgramCounter], memory[ProgramCounter + 1] };
 
                 ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
@@ -674,17 +671,17 @@ public class Chip8VM
 
                     if (instruction.Execute != null && instruction.Execute(args))
                     {
-                        programCounter += 2;
+                        ProgramCounter += 2;
                     }
                 }
                 else
                 {
-                    timer.Stop();
+                    tickTimer.Stop();
                 }
             }
             else
             {
-                timer.Stop();
+                tickTimer.Stop();
             }
         }
         catch (Exception ex)
@@ -693,8 +690,13 @@ public class Chip8VM
         }
     }
 
-    private async void HandleTimers(object sender, HighResolutionTimerElapsedEventArgs args)
+    private async void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
     {
+        for (int i = 0; i < instructionsPerFrame; i++)
+        {
+            ExecuteInstruction();
+        }
+
         try
         {
             if (soundTimer < 1)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -12,9 +13,10 @@ namespace yac8i.gui.sdl.MVVM
     {
         public ICommand LoadCommand { get; }
         public ICommand StartCommand { get; }
-        public ICommand StopCommand { get; }
+        public ICommand RestartCommand { get; }
         public ICommand PauseGoCommand { get; }
 
+        public ObservableCollection<RegisterViewModel> Registers { get; set; } = new ObservableCollection<RegisterViewModel>();
         public ObservableCollection<string> AudioDevices { get; set; } = new ObservableCollection<string>();
 
         public string SelectedSoundDeviceName
@@ -34,6 +36,7 @@ namespace yac8i.gui.sdl.MVVM
         private readonly SDLFront sdlFront;
         private readonly Model model;
         private readonly Window mainWindow;
+        private bool isRunning;
         public MainWindowViewModel(SDLFront sdlFront, Model model, Window mainWindow)
         {
             this.sdlFront = sdlFront;
@@ -43,7 +46,7 @@ namespace yac8i.gui.sdl.MVVM
             this.model.ProgramLoaded += OnProgramLoaded;
             LoadCommand = new RelayCommand(LoadCommandExecute, LoadCommandCanExecute);
             StartCommand = new RelayCommand(StartCommandExecute, StartCommandCanExecute);
-            StopCommand = new RelayCommand(StopCommandExecute, StopCommandCanExecute);
+            RestartCommand = new RelayCommand(RestartCommandExecute, RestartCommandCanExecute);
             PauseGoCommand = new RelayCommand(PauseGoCommandExecute, PauseGoCommandCanExecute);
         }
 
@@ -69,12 +72,12 @@ namespace yac8i.gui.sdl.MVVM
 
         private bool StartCommandCanExecute()
         {
-            return true;
+            return !isRunning;
         }
 
-        private bool StopCommandCanExecute()
+        private bool RestartCommandCanExecute()
         {
-            return true;
+            return isRunning;
         }
 
         private bool PauseGoCommandCanExecute()
@@ -84,12 +87,19 @@ namespace yac8i.gui.sdl.MVVM
 
         private void StartCommandExecute()
         {
-            //TODO: implement load dialog
+            if (!isRunning)
+            {
+                model.Start();
+                isRunning = true;
+                (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            }
         }
 
-        private void StopCommandExecute()
+        private void RestartCommandExecute()
         {
-            //TODO: implement load dialog
+            model.Reset();
+            model.Start();
         }
 
         private async void LoadCommandExecute()
@@ -102,13 +112,36 @@ namespace yac8i.gui.sdl.MVVM
             var result = await openFileDialog.ShowAsync(mainWindow);
             if (result?.Length == 1)
             {
-               model.LoadAndExecute(result[0]);
+                model.Load(result[0]);
             }
         }
 
         private void PauseGoCommandExecute()
         {
-            //TODO: implement load dialog
+            if (isRunning)
+            {
+                model.Pause();
+                isRunning = false;
+                model.UpdateRegisters();
+                Registers.Clear();
+                var regs = new List<byte>(model.Registers);
+                for (int i = 0; i < regs.Count; i++)
+                {
+                    Registers.Add(new RegisterViewModel() { RegisterId = $"0x{i:X}", RegisterValue = $"0x{regs[i]:X2}" });
+                }
+                Registers.Add(new RegisterViewModel() { RegisterId = "I", RegisterValue = $"0x{model.IRegister:X4}" });
+                Registers.Add(new RegisterViewModel() { RegisterId = "PC", RegisterValue = $"0x{model.ProgramCounter:X4}" });
+                (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            }
+            else
+            {
+                model.Go();
+                isRunning = true;
+                (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            }
+
         }
 
         private void OnProgramLoaded(object sender, EventArgs args)
