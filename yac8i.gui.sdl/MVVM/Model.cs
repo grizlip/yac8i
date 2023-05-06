@@ -72,16 +72,15 @@ namespace yac8i.gui.sdl.MVVM
             cancellationTokenSource = new CancellationTokenSource();
             vm.StopAndReset();
             vm.Load(file);
-           
         }
 
         public void Start()
         {
             if (!vmTask?.IsCompleted ?? false)
             {
-               return;
+                return;
             }
-             vmTask = vm.StartAsync(cancellationTokenSource.Token);
+            vmTask = vm.StartAsync(cancellationTokenSource.Token);
         }
 
         public void Pause()

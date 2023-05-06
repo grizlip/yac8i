@@ -17,29 +17,14 @@ namespace yac8i.gui.sdl.MVVM
         public ICommand PauseGoCommand { get; }
 
         public ObservableCollection<RegisterViewModel> Registers { get; set; } = new ObservableCollection<RegisterViewModel>();
-        public ObservableCollection<string> AudioDevices { get; set; } = new ObservableCollection<string>();
-
-        public string SelectedSoundDeviceName
-        {
-            get { return selectedSoundDeviceName; }
-            set
-            {
-                if (SetProperty(ref selectedSoundDeviceName, value))
-                {
-                    this.sdlFront.ChooseAudioDevice(selectedSoundDeviceName);
-                }
-            }
-        }
 
         public ObservableCollection<InstructionViewModel> Instructions { get; set; } = new ObservableCollection<InstructionViewModel>();
         private string selectedSoundDeviceName;
-        private readonly SDLFront sdlFront;
         private readonly Model model;
         private readonly Window mainWindow;
         private bool isRunning;
-        public MainWindowViewModel(SDLFront sdlFront, Model model, Window mainWindow)
+        public MainWindowViewModel(Model model, Window mainWindow)
         {
-            this.sdlFront = sdlFront;
             this.model = model;
             UpdateInstructions();
             this.mainWindow = mainWindow;
@@ -54,15 +39,6 @@ namespace yac8i.gui.sdl.MVVM
         {
             model.UpdateOpcodes();
             UpdateInstructions();
-        }
-
-        public void UpdateAudioDevices()
-        {
-            AudioDevices.Clear();
-            foreach (var s in sdlFront.GetAudioDevices())
-            {
-                AudioDevices.Add(s);
-            }
         }
 
         private bool LoadCommandCanExecute()

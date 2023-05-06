@@ -11,7 +11,6 @@ namespace yac8i.gui.sdl
     public partial class App : Application
     {
         private Chip8VM vm = new Chip8VM();
-        private Task sdlTask;
         private SDLFront sdlFront;
         public override void Initialize()
         {
@@ -30,22 +29,13 @@ namespace yac8i.gui.sdl
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindow();
-                MainWindowViewModel mwvm = new MainWindowViewModel(sdlFront, new Model(vm), desktop.MainWindow);
+                MainWindowViewModel mwvm = new MainWindowViewModel(new Model(vm), desktop.MainWindow);
 
                 desktop.MainWindow.DataContext = mwvm;
 
 
-                if (!sdlFront.Initialize())
-                {
-                    Console.WriteLine("Error while initializing SDL front.");
-                }
-                else
-                {
-                    var audioDevices = sdlFront.GetAudioDevices();
-                    sdlFront.ChooseAudioDevice(audioDevices[0]);
-                    mwvm.UpdateAudioDevices();
-                    sdlTask = sdlFront.Start();
-                }
+                Task.Run(() => sdlFront.InitializeAndStart());
+
             }
 
             base.OnFrameworkInitializationCompleted();

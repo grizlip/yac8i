@@ -79,7 +79,7 @@ public class Chip8VM
 
     private CancellationToken? ct;
 
-    private int instructionsPerFrame = 20;
+    private int instructionsPerFrame = 7;
 
     public Chip8VM()
     {
@@ -459,6 +459,7 @@ public class Chip8VM
                 {
                     registers[registerXIndex] = (byte)lastPressedKey.Value;
                     ProgramCounter+=2;
+                    lastPressedKey = null;
                 }
 
                 return false;

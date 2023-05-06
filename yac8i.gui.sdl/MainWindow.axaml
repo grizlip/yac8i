@@ -17,11 +17,8 @@
             <ColumnDefinition />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <StackPanel Grid.Row="0">
-            <Label Content="Audio devices:" />
-            <ComboBox x:Name="audioDevices" Items="{Binding AudioDevices}" SelectedItem="{Binding SelectedSoundDeviceName}"/>
-        </StackPanel>
-        <Border Grid.Row="1" Grid.Column="0" Background="LightBlue" BorderBrush="Black" BorderThickness="2" Padding="15">
+        
+        <Border Grid.Row="0" Grid.Column="0" Background="LightBlue" BorderBrush="Black" BorderThickness="2" Padding="15">
             <StackPanel>
                 <Button Content="Load" Command="{Binding LoadCommand}"/>
                 <Button Content="Start" Command="{Binding StartCommand}"/>
