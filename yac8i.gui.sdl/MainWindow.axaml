@@ -5,6 +5,7 @@
     xmlns:local="clr-namespace:yac8i.gui.sdl.MVVM;assembly=yac8i.gui.sdl">
     <Window.Resources>
         <local:OpcodeToHexConverter x:Key="hexConverter"/>
+        <local:BoolToStringConverter x:Key="boolConverter"/>
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -62,15 +63,7 @@
                                     <ColumnDefinition Width="10" />
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" FontWeight="Bold" Classes.blue="{Binding PointsToProgramCounter}">
-                                    <TextBlock.Styles>
-                                        <Style Selector="TextBlock.Classes.blue">
-                                            <Style.Setters>
-                                                <Setter Property="Text" Value=">"/>
-                                            </Style.Setters>
-                                        </Style>
-                                    </TextBlock.Styles>
-                                </TextBlock>
+                                <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding PointsToProgramCounter, Converter={StaticResource boolConverter}, ConverterParameter='>'}"/>
                                 <TextBlock Grid.Column="1" Text="{Binding Address, Converter={StaticResource hexConverter}}"/>
                                 <TextBlock Grid.Column="2" Text=":"/>
                                 <TextBlock Grid.Column="3" Text="{Binding Opcode, Converter={StaticResource hexConverter}}"/>

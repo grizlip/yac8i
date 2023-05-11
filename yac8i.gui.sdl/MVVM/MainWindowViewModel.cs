@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Windows.Input;
@@ -109,6 +110,11 @@ namespace yac8i.gui.sdl.MVVM
                 Registers.Add(new RegisterViewModel() { RegisterId = "PC", RegisterValue = $"0x{model.ProgramCounter:X4}" });
                 (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                var currentInstruction = Instructions.Where(item => item.Address == model.ProgramCounter).SingleOrDefault();
+                if (currentInstruction != null)
+                {
+                    currentInstruction.PointsToProgramCounter = true;
+                }
             }
             else
             {
