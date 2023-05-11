@@ -20,10 +20,26 @@ namespace yac8i.gui.sdl.MVVM
         public ObservableCollection<RegisterViewModel> Registers { get; set; } = new ObservableCollection<RegisterViewModel>();
 
         public ObservableCollection<InstructionViewModel> Instructions { get; set; } = new ObservableCollection<InstructionViewModel>();
+
+        public int SelectedIndex
+        {
+            get
+            {
+                return selectedIndex;
+            }
+            set
+            {
+                SetProperty(ref selectedIndex, value);
+            }
+
+        }
+
         private string selectedSoundDeviceName;
         private readonly Model model;
         private readonly Window mainWindow;
         private bool isRunning;
+        private int selectedIndex;
+
         public MainWindowViewModel(Model model, Window mainWindow)
         {
             this.model = model;
@@ -111,9 +127,11 @@ namespace yac8i.gui.sdl.MVVM
                 (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 var currentInstruction = Instructions.Where(item => item.Address == model.ProgramCounter).SingleOrDefault();
+
                 if (currentInstruction != null)
                 {
                     currentInstruction.PointsToProgramCounter = true;
+                    SelectedIndex = (currentInstruction.Address - 512) / 2;
                 }
             }
             else

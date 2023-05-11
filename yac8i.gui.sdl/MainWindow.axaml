@@ -51,9 +51,12 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </StackPanel>
-        <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Height="400">
+        <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" >
             <Label Content="Hex:" />
-                <ListBox  Items="{Binding Instructions}" >
+                <ListBox Height="400"
+                         Items="{Binding Instructions}" 
+                         AutoScrollToSelectedItem="True"
+                         SelectedIndex="{Binding SelectedIndex}">
                      <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="5">
