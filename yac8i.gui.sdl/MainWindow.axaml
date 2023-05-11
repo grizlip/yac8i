@@ -17,12 +17,12 @@
             <ColumnDefinition />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        
+
         <Border Grid.Row="0" Grid.Column="0" Background="LightBlue" BorderBrush="Black" BorderThickness="2" Padding="15">
             <StackPanel>
                 <Button Content="Load" Command="{Binding LoadCommand}"/>
                 <Button Content="Start" Command="{Binding StartCommand}"/>
-                <Button Content="restart" Command="{Binding RestartCommand}"/>
+                <Button Content="Restart" Command="{Binding RestartCommand}"/>
                 <Button Content="Pause/Go" Command="{Binding PauseGoCommand}"/>
             </StackPanel>
         </Border>
@@ -50,14 +50,34 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </StackPanel>
-        <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2">
+        <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Height="400">
             <Label Content="Hex:" />
-            <DataGrid Items="{Binding Instructions}" AutoGenerateColumns="False">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Current" Binding="{Binding PointsToProgramCounter}"/>
-                    <DataGridTextColumn Header="Opcode" Binding="{Binding Opcode, Converter={StaticResource hexConverter}}" />
-                </DataGrid.Columns>
-            </DataGrid>
+                <ListBox  Items="{Binding Instructions}" >
+                     <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" FontWeight="Bold" Classes.blue="{Binding PointsToProgramCounter}">
+                                    <TextBlock.Styles>
+                                        <Style Selector="TextBlock.Classes.blue">
+                                            <Style.Setters>
+                                                <Setter Property="Text" Value=">"/>
+                                            </Style.Setters>
+                                        </Style>
+                                    </TextBlock.Styles>
+                                </TextBlock>
+                                <TextBlock Grid.Column="1" Text="{Binding Address, Converter={StaticResource hexConverter}}"/>
+                                <TextBlock Grid.Column="2" Text=":"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Opcode, Converter={StaticResource hexConverter}}"/>
+                            </Grid>
+                        </DataTemplate>
+                     </ListBox.ItemTemplate>
+                </ListBox>
         </StackPanel>
     </Grid>
 </Window>

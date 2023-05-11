@@ -25,12 +25,22 @@ namespace yac8i.gui.sdl.MVVM
             }
         }
 
+        public ushort Address
+        {
+            get
+            {
+                return address;
+            }
+        }
+
         private readonly ushort opcode;
+        private readonly ushort address;
         private bool pointsToProgramCounter;
 
-        public InstructionViewModel(ushort opcode)
+        public InstructionViewModel(ushort opcode, ushort address)
         {
             this.opcode = opcode;
+            this.address = address;
         }
     }
 }

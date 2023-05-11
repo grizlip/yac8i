@@ -129,10 +129,12 @@ namespace yac8i.gui.sdl.MVVM
         {
             Dispatcher.UIThread.Post(() =>
             {
+                ushort address = 512;
                 Instructions.Clear();
                 foreach (var opcode in model.Opcodes)
                 {
-                    Instructions.Add(new InstructionViewModel(opcode));
+                    Instructions.Add(new InstructionViewModel(opcode, address));
+                    address += 2;
                 }
             });
         }
