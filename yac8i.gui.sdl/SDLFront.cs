@@ -4,11 +4,13 @@ using System;
 using SDL2;
 using System.Runtime.InteropServices;
 using System.Linq;
+using System.Threading;
 
 namespace yac8i.gui.sdl
 {
     public class SDLFront
     {
+        public AutoResetEvent DoFrameAutoResetEvent = new AutoResetEvent(false);
         private const int PIXEL_SIZE = 16;
         private bool[,] vmSurface = new bool[64, 32];
         private object vmSurfaceLock = new object();
@@ -23,7 +25,6 @@ namespace yac8i.gui.sdl
         private const double SOUND_FREQUENCY = 261.63d;
         private SDL.SDL_AudioSpec have;
         private uint soundDeviceId;
-
 
         public SDLFront(Chip8VM vm)
         {
@@ -54,7 +55,7 @@ namespace yac8i.gui.sdl
             if (soundDevicesNames.Any())
             {
                 //TODO: make it possible to choose sound device
-                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[0], 0, ref want, out have, 0);
+                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[1], 0, ref want, out have, 0);
 
                 if (soundDeviceId == 0)
                 {
@@ -85,18 +86,7 @@ namespace yac8i.gui.sdl
             {
                 throw new Exception($"There was an issue creating the window. {SDL.SDL_GetError()}");
             }
-
-            // Creates a new SDL hardware renderer. 
-            rendererPtr = SDL.SDL_CreateRenderer(windowPtr,
-                                                  -1,
-                                                  SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED);
-
-            if (rendererPtr == IntPtr.Zero)
-            {
-                throw new Exception($"There was an issue creating the renderer. {SDL.SDL_GetError()}");
-            }
-
-            SetWindowTexturePtrAndPitch(windowPtr, rendererPtr);
+            SetWindowTexturePtrAndPitch(windowPtr);
 
 
             if (windowTexturePtr == IntPtr.Zero)
@@ -116,46 +106,29 @@ namespace yac8i.gui.sdl
             SDL.SDL_Quit();
         }
 
-        private void SetWindowTexturePtrAndPitch(IntPtr windowPtr, IntPtr rendererPtr)
+        private void SetWindowTexturePtrAndPitch(IntPtr windowPtr)
         {
             pitch = 0;
             windowTexturePtr = IntPtr.Zero;
 
-            var windowSurfacePtr = SDL.SDL_GetWindowSurface(windowPtr);
+            // Creates a new SDL hardware renderer. 
+            rendererPtr = SDL.SDL_CreateRenderer(windowPtr,
+                                                  -1,
+                                                  SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED | SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
 
-            if (windowSurfacePtr != IntPtr.Zero)
+            if (rendererPtr == IntPtr.Zero)
             {
-                object? tmpMarshaledObject = Marshal.PtrToStructure(windowSurfacePtr, typeof(SDL2.SDL.SDL_Surface));
-
-                if (tmpMarshaledObject != null)
-                {
-                    var windowSurfaceStruct = (SDL2.SDL.SDL_Surface)tmpMarshaledObject;
-                    pitch = windowSurfaceStruct.pitch;
-
-                    tmpMarshaledObject = Marshal.PtrToStructure(windowSurfaceStruct.format, typeof(SDL2.SDL.SDL_PixelFormat));
-                    if (tmpMarshaledObject != null)
-                    {
-                        var format_struct = (SDL2.SDL.SDL_PixelFormat)tmpMarshaledObject;
-
-                        windowTexturePtr = SDL.SDL_CreateTexture(rendererPtr,
-                                                                 format_struct.format,
-                                                                 (int)SDL.SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING,
-                                                                 64 * PIXEL_SIZE, 32 * PIXEL_SIZE);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"There was an issue reading window pixel format.  {SDL.SDL_GetError()}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"There was an issue reading window texture.  {SDL.SDL_GetError()}");
-                }
+                throw new Exception($"There was an issue creating the renderer. {SDL.SDL_GetError()}");
             }
-            else
-            {
-                Console.WriteLine($"There was an issue reading window surface.  {SDL.SDL_GetError()}");
-            }
+            uint pixelFormat = SDL.SDL_GetWindowPixelFormat(windowPtr);
+            windowTexturePtr = SDL.SDL_CreateTexture(rendererPtr,
+                                                    pixelFormat,
+                                                     (int)SDL.SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING,
+                                                     64 * PIXEL_SIZE, 32 * PIXEL_SIZE);
+            
+            
+            pitch = SDL.SDL_BYTESPERPIXEL(pixelFormat) * 64 * PIXEL_SIZE;
+
         }
 
         private void MainLoop()
@@ -239,7 +212,7 @@ namespace yac8i.gui.sdl
                     }
                 }
 
-                vm.TickAutoResetEvent.WaitOne(200);
+                DoFrameAutoResetEvent.WaitOne(200);
             }
         }
 

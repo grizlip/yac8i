@@ -582,15 +582,15 @@ public class Chip8VM
         if (loaded)
         {
 
-            try
+           try
             {
                 tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second
                 tickTimer.Elapsed += OnTick;
                 tickTimer.Start();
 
-                while (tickTimer.IsRunning)
+                while (!ct.Value.IsCancellationRequested && tickTimer.IsRunning)
                 {
-                    await Task.Delay(200, cancelToken);
+                    await Task.Delay(200).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
