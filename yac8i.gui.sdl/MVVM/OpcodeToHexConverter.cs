@@ -12,7 +12,7 @@ namespace yac8i.gui.sdl.MVVM
             {
                 return $"0x{opcode:X4}";
             }
-            throw new ArgumentException($"{nameof(OpcodeToHexConverter)} Convert only ushort type supported. Provided: {value.GetType().Name}");
+            throw new ArgumentException($"{nameof(OpcodeToHexConverter)} Convert only ushort type supported. Provided: {value?.GetType().Name}");
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -27,7 +27,7 @@ namespace yac8i.gui.sdl.MVVM
                 ushort.TryParse(hex, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out result);
                 return result;
             }
-            throw new ArgumentException($"{nameof(OpcodeToHexConverter)} ConvertBack only string type supported. Provided: {value.GetType().Name}");
+            throw new ArgumentException($"{nameof(OpcodeToHexConverter)} ConvertBack only string type supported. Provided: {value?.GetType().Name}");
         }
     }
 }

@@ -95,12 +95,12 @@ namespace yac8i.gui.sdl.MVVM
             }
         }
 
-        private void OnTick(object sender, EventArgs arg)
+        private void OnTick(object? sender, EventArgs arg)
         {
-           Dispatcher.UIThread.Post(() =>
-           {
-               UpdateGUI();
-           });
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateGUI();
+            });
         }
 
         private void RestartCommandExecute()
@@ -116,6 +116,7 @@ namespace yac8i.gui.sdl.MVVM
             openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "ch8" } });
             openFileDialog.Filters.Add(new FileDialogFilter() { Name = "All files", Extensions = { "*" } });
             openFileDialog.AllowMultiple = false;
+
             var result = await openFileDialog.ShowAsync(mainWindow);
             if (result?.Length == 1)
             {
@@ -169,7 +170,7 @@ namespace yac8i.gui.sdl.MVVM
             }
         }
 
-        private void OnProgramLoaded(object sender, EventArgs args)
+        private void OnProgramLoaded(object? sender, EventArgs args)
         {
             UpdateInstructions();
         }

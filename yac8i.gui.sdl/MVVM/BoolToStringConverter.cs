@@ -12,7 +12,7 @@ namespace yac8i.gui.sdl.MVVM
             {
                 return state ? parameter : string.Empty;
             }
-            throw new ArgumentException($"{nameof(BoolToStringConverter)} Convert only bool type supported. Provided: {value.GetType().Name}");
+            throw new ArgumentException($"{nameof(BoolToStringConverter)} Convert only bool type supported. Provided: {value?.GetType().Name}");
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

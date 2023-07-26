@@ -30,5 +30,12 @@ namespace yac8i.gui.sdl.MVVM
         private string registerId;
         private string registerValue;
 
+        public RegisterViewModel()
+        {
+            registerId = string.Empty;
+            registerValue = string.Empty;
+
+        }
+
     }
 }

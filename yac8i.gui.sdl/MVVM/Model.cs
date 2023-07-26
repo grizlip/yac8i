@@ -7,8 +7,8 @@ namespace yac8i.gui.sdl.MVVM
 {
     public class Model : IDisposable
     {
-        public event EventHandler ProgramLoaded;
-        public event EventHandler Tick;
+        public event EventHandler? ProgramLoaded;
+        public event EventHandler? Tick;
         public IReadOnlyCollection<ushort> Opcodes => opcodes;
 
         public IReadOnlyCollection<byte> Registers => registers;
@@ -46,7 +46,7 @@ namespace yac8i.gui.sdl.MVVM
                 Task.Run(() => sdlFront.InitializeAndStart());
             }
             this.vm.ProgramLoaded += OnProgramLoaded;
-
+            this.lastRomFile = string.Empty;
             UpdateOpcodes();
             UpdateRegisters();
         }
@@ -148,7 +148,7 @@ namespace yac8i.gui.sdl.MVVM
             tickTask?.Dispose();
         }
 
-        private void OnProgramLoaded(object sender, int bytesCount)
+        private void OnProgramLoaded(object? sender, int bytesCount)
         {
             UpdateOpcodes(bytesCount);
             ProgramLoaded?.Invoke(this, EventArgs.Empty);
