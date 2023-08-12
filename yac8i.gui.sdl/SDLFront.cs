@@ -84,5 +84,10 @@ namespace yac8i.gui.sdl
         {
             sdlDraw?.DoFrame();
         }
+
+        public void Stop()
+        {
+            sdlDraw?.Stop();
+        }
     }
 }

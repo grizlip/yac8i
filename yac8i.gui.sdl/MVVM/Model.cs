@@ -110,6 +110,7 @@ namespace yac8i.gui.sdl.MVVM
             cancellationTokenSource.Dispose();
             vmTask?.Dispose();
             tickTask?.Dispose();
+            sdlFront.Stop();
         }
 
         private void OnVmTickAsync(CancellationToken token)

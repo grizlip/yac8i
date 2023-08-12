@@ -31,11 +31,13 @@ namespace yac8i.gui.sdl
                 {SDL.SDL_Keycode.SDLK_v,0xF},
             };
         private readonly Chip8VM vm;
+        private bool running;
         public SDLDraw(int pitch, IntPtr windowTexturePtr, IntPtr rendererPtr, Chip8VM vm)
         {
             this.pitch = pitch;
             this.windowTexturePtr = windowTexturePtr;
             this.rendererPtr = rendererPtr;
+            this.running = false;
             this.vm = vm;
         }
 
@@ -46,7 +48,7 @@ namespace yac8i.gui.sdl
 
         public void Run()
         {
-            var running = true;
+            running = true;
             var surface = new byte[512 * 4096];
 
             while (running)
@@ -104,6 +106,12 @@ namespace yac8i.gui.sdl
 
                 DoFrameAutoResetEvent.WaitOne(200);
             }
+        }
+
+        public void Stop()
+        {
+            running = false;
+            DoFrameAutoResetEvent.Set();
         }
 
         private bool TryUpdatePixel(byte[] surface, int x, int y, bool set = false)
