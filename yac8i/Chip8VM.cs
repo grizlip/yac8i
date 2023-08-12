@@ -53,7 +53,7 @@ public class Chip8VM
                                     0xF0, 0x80, 0xF0, 0x80, 0x80 }; // F
 
 
-    private HighResolutionTimer tickTimer = null;
+    private HighResolutionTimer tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second
 
     private byte[] memory = new byte[4096];
 
@@ -582,9 +582,8 @@ public class Chip8VM
         if (loaded)
         {
 
-           try
+            try
             {
-                tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second
                 tickTimer.Elapsed += OnTick;
                 tickTimer.Start();
 
@@ -617,15 +616,12 @@ public class Chip8VM
 
     public void StopAndReset()
     {
-    
-        if (tickTimer != null)
+        if (tickTimer.IsRunning)
         {
-            if (tickTimer.IsRunning)
-            {
-                tickTimer.Stop();
-            }
-            tickTimer.Elapsed -= OnTick;
+            tickTimer.Stop();
         }
+        tickTimer.Elapsed -= OnTick;
+
         ProgramCounter = 0x200;
         IRegister = 0;
         soundTimer = 0;
