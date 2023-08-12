@@ -12,21 +12,9 @@ namespace yac8i.gui.sdl.MVVM
         public IReadOnlyCollection<ushort> Opcodes => opcodes;
 
         public IReadOnlyCollection<byte> Registers => registers;
-        public ushort IRegister
-        {
-            get
-            {
-                return vm.IRegister;
-            }
-        }
+        public ushort IRegister => vm.IRegister;
 
-        public ushort ProgramCounter
-        {
-            get
-            {
-                return vm.ProgramCounter;
-            }
-        }
+        public ushort ProgramCounter => vm.ProgramCounter;
 
         private readonly List<ushort> opcodes = new List<ushort>();
         private readonly List<byte> registers = new List<byte>();
@@ -49,30 +37,6 @@ namespace yac8i.gui.sdl.MVVM
             this.lastRomFile = string.Empty;
             UpdateOpcodes();
             UpdateRegisters();
-        }
-
-        private void OnVmTickAsync(CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                if (vm.TickAutoResetEvent.WaitOne(1))
-                {
-                    Tick?.Invoke(this, EventArgs.Empty);
-                    sdlFront?.DoFrameAutoResetEvent.Set();
-                }
-            }
-        }
-
-        public void UpdateOpcodes(int bytesCount = 0)
-        {
-            opcodes.Clear();
-            int bytesCountAdjusted = (bytesCount + 512);
-            for (int i = 512; i < bytesCountAdjusted; i += 2)
-            {
-                byte[] instructionRaw = new byte[] { vm.Memory[i], vm.Memory[i + 1] };
-                ushort opcode = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
-                opcodes.Add(opcode);
-            }
         }
 
         public void UpdateRegisters()
@@ -119,7 +83,7 @@ namespace yac8i.gui.sdl.MVVM
 
         public void Pause()
         {
-            vm.Puase();
+            vm.Pause();
         }
 
         public void Go()
@@ -146,6 +110,30 @@ namespace yac8i.gui.sdl.MVVM
             cancellationTokenSource.Dispose();
             vmTask?.Dispose();
             tickTask?.Dispose();
+        }
+
+        private void OnVmTickAsync(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested)
+            {
+                if (vm.TickAutoResetEvent.WaitOne(1))
+                {
+                    Tick?.Invoke(this, EventArgs.Empty);
+                    sdlFront?.DoFrame();
+                }
+            }
+        }
+
+        private void UpdateOpcodes(int bytesCount = 0)
+        {
+            opcodes.Clear();
+            int bytesCountAdjusted = (bytesCount + 512);
+            for (int i = 512; i < bytesCountAdjusted; i += 2)
+            {
+                byte[] instructionRaw = new byte[] { vm.Memory[i], vm.Memory[i + 1] };
+                ushort opcode = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
+                opcodes.Add(opcode);
+            }
         }
 
         private void OnProgramLoaded(object? sender, int bytesCount)

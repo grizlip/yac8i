@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Windows.Input;
@@ -10,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace yac8i.gui.sdl.MVVM
 {
-    public class MainWindowViewModel : ObservableObject
+    public class MainWindowViewModel : ObservableObject, IDisposable
     {
         public ICommand LoadCommand { get; }
         public ICommand StartCommand { get; }
@@ -23,15 +22,8 @@ namespace yac8i.gui.sdl.MVVM
 
         public int SelectedIndex
         {
-            get
-            {
-                return selectedIndex;
-            }
-            set
-            {
-                SetProperty(ref selectedIndex, value);
-            }
-
+            get => selectedIndex;
+            set => SetProperty(ref selectedIndex, value);
         }
 
         private readonly Model model;
@@ -57,10 +49,32 @@ namespace yac8i.gui.sdl.MVVM
             Registers.Add(new RegisterViewModel() { RegisterId = "PC", RegisterValue = "-" });
         }
 
-        public void OnProgramLoaded()
+        public void Dispose()
         {
-            model.UpdateOpcodes();
-            UpdateInstructions();
+            model.Dispose();
+        }
+
+        private void UpdateGUI()
+        {
+            model.UpdateRegisters();
+            var regs = new List<byte>(model.Registers);
+            int i = 0;
+            for (; i < regs.Count; i++)
+            {
+                Registers[i].RegisterValue = $"0x{regs[i]:X2}";
+            }
+            Registers[i].RegisterValue = $"0x{model.IRegister:X4}";
+            Registers[i + 1].RegisterValue = $"0x{model.ProgramCounter:X4}";
+
+            foreach (var instruction in Instructions)
+            {
+                instruction.PointsToProgramCounter = false;
+                if (instruction.Address == model.ProgramCounter)
+                {
+                    instruction.PointsToProgramCounter = true;
+                    SelectedIndex = (instruction.Address - 512) / 2;
+                }
+            }
         }
 
         private bool LoadCommandCanExecute()
@@ -112,9 +126,12 @@ namespace yac8i.gui.sdl.MVVM
         private async void LoadCommandExecute()
         {
             var openFileDialog = new OpenFileDialog();
-            openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "rom" } });
-            openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "ch8" } });
-            openFileDialog.Filters.Add(new FileDialogFilter() { Name = "All files", Extensions = { "*" } });
+            if (openFileDialog.Filters != null)
+            {
+                openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "rom" } });
+                openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "ch8" } });
+                openFileDialog.Filters.Add(new FileDialogFilter() { Name = "All files", Extensions = { "*" } });
+            }
             openFileDialog.AllowMultiple = false;
 
             var result = await openFileDialog.ShowAsync(mainWindow);
@@ -143,30 +160,6 @@ namespace yac8i.gui.sdl.MVVM
                 isRunning = true;
                 (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-            }
-
-        }
-
-        public void UpdateGUI()
-        {
-            model.UpdateRegisters();
-            var regs = new List<byte>(model.Registers);
-            int i = 0;
-            for (; i < regs.Count; i++)
-            {
-                Registers[i].RegisterValue = $"0x{regs[i]:X2}";
-            }
-            Registers[i].RegisterValue = $"0x{model.IRegister:X4}";
-            Registers[i + 1].RegisterValue = $"0x{model.ProgramCounter:X4}";
-
-            foreach (var instruction in Instructions)
-            {
-                instruction.PointsToProgramCounter = false;
-                if (instruction.Address == model.ProgramCounter)
-                {
-                    instruction.PointsToProgramCounter = true;
-                    SelectedIndex = (instruction.Address - 512) / 2;
-                }
             }
         }
 

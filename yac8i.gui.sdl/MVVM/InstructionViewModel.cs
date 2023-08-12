@@ -7,31 +7,13 @@ namespace yac8i.gui.sdl.MVVM
     {
         public bool PointsToProgramCounter
         {
-            get
-            {
-                return pointsToProgramCounter;
-            }
-            set
-            {
-                SetProperty(ref pointsToProgramCounter, value);
-            }
+            get => pointsToProgramCounter;
+            set => SetProperty(ref pointsToProgramCounter, value);
         }
 
-        public ushort Opcode
-        {
-            get
-            {
-                return opcode;
-            }
-        }
+        public ushort Opcode => opcode;
 
-        public ushort Address
-        {
-            get
-            {
-                return address;
-            }
-        }
+        public ushort Address => address;
 
         private readonly ushort opcode;
         private readonly ushort address;

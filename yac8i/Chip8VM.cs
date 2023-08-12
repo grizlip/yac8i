@@ -605,7 +605,7 @@ public class Chip8VM
         }
     }
 
-    public void Puase()
+    public void Pause()
     {
         tickTimer.Elapsed -= OnTick;
     }

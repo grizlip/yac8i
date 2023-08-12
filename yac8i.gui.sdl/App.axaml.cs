@@ -2,12 +2,10 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using System;
-using System.Threading.Tasks;
 using yac8i.gui.sdl.MVVM;
 
 namespace yac8i.gui.sdl
 {
-
     public partial class App : Application
     {
         private Chip8VM vm = new Chip8VM();
@@ -33,6 +31,5 @@ namespace yac8i.gui.sdl
 
             base.OnFrameworkInitializationCompleted();
         }
-
     }
 }
