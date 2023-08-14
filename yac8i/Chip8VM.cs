@@ -111,22 +111,22 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x1000,Mask=0xF000, Execute = args =>
             {
-                    this.ProgramCounter = args;
+                    this.ProgramCounter = Instruction.NNN(args);
                     return false;
             }},
             new Instruction() { Opcode=0x2000,Mask=0xF000, Execute = args =>
             {
                 this.stack.Push((ushort)(ProgramCounter+2));
-                this.ProgramCounter = args;
+                this.ProgramCounter = Instruction.NNN(args);
 
                 return false;
             }},
             new Instruction() { Opcode=0x3000,Mask=0xF000, Execute = args =>
             {
-                int registerIndex = (args & 0x0F00) >> 8;
+                byte registerIndex = Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
                 byte registerValue = registers[registerIndex];
-                byte compareToValue = (byte)(args & 0x00FF);
+                byte compareToValue = Instruction.NN(args);
                 bool valuesEqual = registerValue == compareToValue;
                 if(valuesEqual)
                 {
@@ -136,10 +136,10 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x4000,Mask=0xF000, Execute = args =>
             {
-                int registerIndex = (args & 0x0F00) >> 8;
+                byte registerIndex = Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
                 byte registerValue = registers[registerIndex];
-                byte compareToValue = (byte)(args & 0x00FF);
+                byte compareToValue = Instruction.NN(args);
                 bool valuesEqual = registerValue == compareToValue;
                 if(!valuesEqual)
                 {
@@ -149,8 +149,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x5000,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
@@ -162,25 +162,25 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x6000,Mask=0xF000, Execute = args =>
             {
-                int registerIndex  = (args & 0x0F00)>>8;
+                byte registerIndex  = Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
-                byte newRegisterValue = (byte)(args & 0x00FF);
+                byte newRegisterValue =  Instruction.NN(args);
                 registers[registerIndex] = newRegisterValue;
                 return true;
             }},
             new Instruction() { Opcode=0x7000,Mask=0xF000, Execute = args =>
             {
-                int registerIndex  = (args & 0x0F00)>>8;
+                int registerIndex  =  Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
-                byte valueToAdd = (byte)(args & 0x00FF);
+                byte valueToAdd =  Instruction.NN(args);
                 registers[registerIndex] += valueToAdd; //this will wrap if overflow happens. Not sure if that is correct behavior. 
                 return true;
 
             }},
             new Instruction() { Opcode=0x8000,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = registers[registerYIndex];
@@ -188,8 +188,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x8001,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] | registers[registerYIndex]);
@@ -198,8 +198,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x8002,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] & registers[registerYIndex]);
@@ -209,8 +209,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x8003,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] ^ registers[registerYIndex]);
@@ -220,8 +220,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x8004,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 byte xValue = registers[registerXIndex];
@@ -241,8 +241,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x8005,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 byte xValue = registers[registerXIndex];
@@ -257,8 +257,8 @@ public class Chip8VM
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
                 //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = registers[registerYIndex];
@@ -273,15 +273,15 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x8007,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
 
                 byte xValue = registers[registerXIndex];
                 byte yValue = registers[registerYIndex];
                 //perform substraction (no need to worry about underflow here)
-                registers[registerXIndex] = (byte)(yValue- xValue);
+                registers[registerXIndex] = (byte)(yValue - xValue);
                 registers[0xF] = (byte)(xValue<yValue ? 1 : 0);
                 return true;
 
@@ -291,8 +291,8 @@ public class Chip8VM
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
                 //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = registers[registerYIndex];
@@ -306,8 +306,8 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0x9000,Mask=0xF00F, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
@@ -320,7 +320,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xA000,Mask=0xF000, Execute = args =>
             {
-                IRegister = (ushort)(args & 0x0FFF);
+                IRegister = Instruction.NNN(args);
                 return true;
             }},
             new Instruction() { Opcode=0xB000,Mask=0xF000, Execute = args =>
@@ -330,7 +330,7 @@ public class Chip8VM
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
                 //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
                 ushort jumpOffset = registers[0];
-                ushort jumpBase = (ushort)(args & 0x0FFF);
+                ushort jumpBase = Instruction.NNN(args);
 
                 ProgramCounter = (ushort)(jumpBase + jumpOffset);
 
@@ -338,9 +338,9 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xC000,Mask=0xF000, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
-                byte nnArgs = (byte)(args & 0x00FF);
+                byte nnArgs = Instruction.NN(args);
                 Random r = new Random(DateTime.Now.Second);
                 byte[] random = new byte[1];
                 r.NextBytes(random);
@@ -350,9 +350,9 @@ public class Chip8VM
             new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = args =>
             {
                 registers[0xF] = 0;
-                int registerXIndex = (args & 0x0F00)>>8;
-                int registerYIndex = (args & 0x00F0)>>4;
-                int spriteLength = (args & 0x000F);
+                byte registerXIndex = Instruction.X(args);
+                byte registerYIndex = Instruction.Y(args);
+                int spriteLength = Instruction.N(args);
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 byte xPosition = registers[registerXIndex];
@@ -403,7 +403,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xE09E,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte keyIndex = registers[registerXIndex];
                 if(keyIndex > 0xF)
@@ -423,7 +423,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xE0A1,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte keyIndex = registers[registerXIndex];
                 if(keyIndex > 0xF)
@@ -445,14 +445,14 @@ public class Chip8VM
             },
             new Instruction() { Opcode=0xF007,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 registers[registerXIndex] = delayTimer;
                 return true;
             }},
             new Instruction() { Opcode=0xF00A,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
 
                 if(lastPressedKey.HasValue)
@@ -466,21 +466,21 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xF015,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 delayTimer = registers[registerXIndex] ;
                 return true;
             }},
             new Instruction() { Opcode=0xF018,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 soundTimer = registers[registerXIndex] ;
                 return true;
             }},
             new Instruction() { Opcode=0xF01E,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte registerValue = registers[registerXIndex];
                 IRegister += registerValue;
@@ -496,7 +496,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xF029,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte registerValue = registers[registerXIndex];
                 IRegister = (ushort)(registerValue * 5);
@@ -504,7 +504,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xF033,Mask=0xF0FF, Execute = args =>
             {
-                int registerXIndex = (args & 0x0F00)>>8;
+                int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte registerValue = registers[registerXIndex];
 
@@ -519,7 +519,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xF055,Mask=0xF0FF, Execute = args =>
             {
-                int lastRegisterIndex = (args & 0x0F00)>>8;
+                int lastRegisterIndex = Instruction.X(args);
                 CheckRegisterIndex(lastRegisterIndex);
 
                 for(int i=0;i<=lastRegisterIndex;i++)
@@ -532,7 +532,7 @@ public class Chip8VM
             }},
             new Instruction() { Opcode=0xF065,Mask=0xF0FF, Execute = args =>
             {
-                int lastRegisterIndex = (args & 0x0F00)>>8;
+                int lastRegisterIndex = Instruction.X(args);
                 CheckRegisterIndex(lastRegisterIndex);
                 for(int i=0;i<=lastRegisterIndex;i++)
                 {
