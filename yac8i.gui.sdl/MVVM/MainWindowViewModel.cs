@@ -12,9 +12,8 @@ namespace yac8i.gui.sdl.MVVM
     public class MainWindowViewModel : ObservableObject, IDisposable
     {
         public ICommand LoadCommand { get; }
-        public ICommand StartCommand { get; }
+        public ICommand StartPauseCommand { get; }
         public ICommand RestartCommand { get; }
-        public ICommand PauseGoCommand { get; }
 
         public ObservableCollection<RegisterViewModel> Registers { get; set; } = new ObservableCollection<RegisterViewModel>();
 
@@ -28,7 +27,9 @@ namespace yac8i.gui.sdl.MVVM
 
         private readonly Model model;
         private readonly Window mainWindow;
-        private bool isRunning;
+        private bool started;
+        private bool running;
+        private bool loaded;
         private int selectedIndex;
 
         public MainWindowViewModel(Model model, Window mainWindow)
@@ -37,10 +38,9 @@ namespace yac8i.gui.sdl.MVVM
             UpdateInstructions();
             this.mainWindow = mainWindow;
             this.model.ProgramLoaded += OnProgramLoaded;
-            LoadCommand = new RelayCommand(LoadCommandExecute, LoadCommandCanExecute);
-            StartCommand = new RelayCommand(StartCommandExecute, StartCommandCanExecute);
+            LoadCommand = new RelayCommand(LoadCommandExecute);
+            StartPauseCommand = new RelayCommand(StartPauseCommandExecute, StartPauseCommandCanExecute);
             RestartCommand = new RelayCommand(RestartCommandExecute, RestartCommandCanExecute);
-            PauseGoCommand = new RelayCommand(PauseGoCommandExecute, PauseGoCommandCanExecute);
             for (int i = 0; i < 16; i++)
             {
                 Registers.Add(new RegisterViewModel() { RegisterId = $"0x{i:X}", RegisterValue = "-" });
@@ -77,37 +77,46 @@ namespace yac8i.gui.sdl.MVVM
             }
         }
 
-        private bool LoadCommandCanExecute()
+        private bool StartPauseCommandCanExecute()
         {
-            return true;
-        }
-
-        private bool StartCommandCanExecute()
-        {
-            return !isRunning;
+            return loaded;
         }
 
         private bool RestartCommandCanExecute()
         {
-            return isRunning;
+            return started;
         }
 
-        private bool PauseGoCommandCanExecute()
+        private void StartPauseCommandExecute()
         {
-            return true;
-        }
-
-        private void StartCommandExecute()
-        {
-            if (!isRunning)
+            if (!started)
             {
-                model.Start();
-                isRunning = true;
-                (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                model.Tick += OnTick;
+                Start();
+            }
+            else
+            {
+                if (running)
+                {
+                    model.Pause();
+                    model.Tick -= OnTick;
+                    running = false;
+                    UpdateGUI();
+                    (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                    (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+
+                }
+                else
+                {
+                    model.Go();
+                    model.Tick += OnTick;
+                    running = true;
+                    (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                    (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                }
             }
         }
+
+
 
         private void OnTick(object? sender, EventArgs arg)
         {
@@ -120,7 +129,17 @@ namespace yac8i.gui.sdl.MVVM
         private void RestartCommandExecute()
         {
             model.Reset();
+            Start();
+        }
+        
+        private void Start()
+        {
             model.Start();
+            started = true;
+            (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            model.Tick += OnTick;
+            running = true;
         }
 
         private async void LoadCommandExecute()
@@ -139,28 +158,10 @@ namespace yac8i.gui.sdl.MVVM
             {
                 model.Load(result[0]);
             }
-        }
-
-        private void PauseGoCommandExecute()
-        {
-            if (isRunning)
-            {
-                model.Pause();
-                model.Tick -= OnTick;
-                isRunning = false;
-                UpdateGUI();
-                (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-
-            }
-            else
-            {
-                model.Go();
-                model.Tick += OnTick;
-                isRunning = true;
-                (StartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-            }
+            loaded = true;
+            running = false;
+            started = false;
+            (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
         }
 
         private void OnProgramLoaded(object? sender, EventArgs args)

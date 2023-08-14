@@ -22,9 +22,8 @@
         <Border Grid.Row="0" Grid.Column="0" Background="LightBlue" BorderBrush="Black" BorderThickness="2" Padding="15">
             <StackPanel>
                 <Button Content="Load" Command="{Binding LoadCommand}"/>
-                <Button Content="Start" Command="{Binding StartCommand}"/>
+                <Button Content="Start/Pause" Command="{Binding StartPauseCommand}"/>
                 <Button Content="Restart" Command="{Binding RestartCommand}"/>
-                <Button Content="Pause/Go" Command="{Binding PauseGoCommand}"/>
             </StackPanel>
         </Border>
         <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2">
