@@ -39,6 +39,11 @@ namespace yac8i.gui.sdl.MVVM
             UpdateRegisters();
         }
 
+        public string GetMnemonic(ushort instruction)
+        {
+            return vm.GetMnemonic(instruction);
+        }
+
         public void UpdateRegisters()
         {
             registers.Clear();
@@ -128,7 +133,7 @@ namespace yac8i.gui.sdl.MVVM
         private void UpdateOpcodes(int bytesCount = 0)
         {
             opcodes.Clear();
-            int bytesCountAdjusted = (bytesCount + 512);
+            int bytesCountAdjusted = bytesCount + 512;
             for (int i = 512; i < bytesCountAdjusted; i += 2)
             {
                 byte[] instructionRaw = new byte[] { vm.Memory[i], vm.Memory[i + 1] };

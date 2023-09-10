@@ -131,7 +131,7 @@ namespace yac8i.gui.sdl.MVVM
             model.Reset();
             Start();
         }
-        
+
         private void Start()
         {
             model.Start();
@@ -177,7 +177,8 @@ namespace yac8i.gui.sdl.MVVM
                 Instructions.Clear();
                 foreach (var opcode in model.Opcodes)
                 {
-                    Instructions.Add(new InstructionViewModel(opcode, address));
+                    
+                    Instructions.Add(new InstructionViewModel(opcode, address, model.GetMnemonic(opcode))); //TODO: make model to provide mnemonic from VM
                     address += 2;
                 }
             });

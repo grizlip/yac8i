@@ -23,8 +23,7 @@ namespace yac8i.gui.sdl.MVVM
                 {
                     hex = hex.Substring(2);
                 }
-                ushort result;
-                ushort.TryParse(hex, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out result);
+                ushort.TryParse(hex, NumberStyles.HexNumber, CultureInfo.CurrentCulture, out ushort result);
                 return result;
             }
             throw new ArgumentException($"{nameof(OpcodeToHexConverter)} ConvertBack only string type supported. Provided: {value?.GetType().Name}");

@@ -7,35 +7,36 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 
-namespace yac8i;
-
-public class Chip8VM
+namespace yac8i
 {
 
-    public event EventHandler<int> ProgramLoaded;
-
-    public bool[,] Surface
+    public class Chip8VM
     {
-        get
+
+        public event EventHandler<int> ProgramLoaded;
+
+        public bool[,] Surface
         {
-            return this.surface;
+            get
+            {
+                return this.surface;
+            }
         }
-    }
 
-    public EventHandler<string> NewMessage;
+        public EventHandler<string> NewMessage;
 
-    public EventHandler<bool> BeepStatus;
+        public EventHandler<bool> BeepStatus;
 
-    public AutoResetEvent TickAutoResetEvent = new AutoResetEvent(false);
+        public AutoResetEvent TickAutoResetEvent = new AutoResetEvent(false);
 
-    public ReadOnlyCollection<byte> Memory => new ReadOnlyCollection<byte>(memory);
+        public ReadOnlyCollection<byte> Memory => new ReadOnlyCollection<byte>(memory);
 
-    public ReadOnlyCollection<byte> Registers => new ReadOnlyCollection<byte>(registers);
-    public ushort IRegister { get; private set; } = 0;
+        public ReadOnlyCollection<byte> Registers => new ReadOnlyCollection<byte>(registers);
+        public ushort IRegister { get; private set; } = 0;
 
-    public ushort ProgramCounter { get; private set; } = 0x200;
+        public ushort ProgramCounter { get; private set; } = 0x200;
 
-    private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+        private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
                                     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
                                     0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
@@ -53,37 +54,37 @@ public class Chip8VM
                                     0xF0, 0x80, 0xF0, 0x80, 0x80 }; // F
 
 
-    private HighResolutionTimer tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second
+        private readonly HighResolutionTimer tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second
 
-    private byte[] memory = new byte[4096];
+        private readonly byte[] memory = new byte[4096];
 
-    private byte[] registers = new byte[16];
+        private readonly byte[] registers = new byte[16];
 
-    private Stack<ushort> stack = new Stack<ushort>();
+        private readonly Stack<ushort> stack = new Stack<ushort>();
 
-    private byte soundTimer = 0;
+        private byte soundTimer = 0;
 
-    private bool beepStatus = false;
+        private bool beepStatus = false;
 
-    private byte delayTimer = 0;
+        private byte delayTimer = 0;
 
-    private List<Instruction> instructions;
+        private readonly List<Instruction> instructions;
 
-    private ushort pressedKeys = 0;
+        private ushort pressedKeys = 0;
 
-    private ushort? lastPressedKey = null;
+        private ushort? lastPressedKey = null;
 
-    private bool loaded = false;
+        private bool loaded = false;
 
-    private bool[,] surface = new bool[64, 32];
+        private readonly bool[,] surface = new bool[64, 32];
 
-    private CancellationToken? ct;
+        private CancellationToken? ct;
 
-    private int instructionsPerFrame = 7;
+        private readonly int instructionsPerFrame = 7;
 
-    public Chip8VM()
-    {
-        instructions = new List<Instruction>()
+        public Chip8VM()
+        {
+            instructions = new List<Instruction>()
         {
             // TODO: This instruction collides with 0x00EF and 0x00E0
             //       It happens because all three instructions beings with 0
@@ -91,15 +92,21 @@ public class Chip8VM
             //       if they are 0, then we assume we have a match
             //       Find a way to implement this better. 
             //new Instruction() { Opcode=0x0000,Mask=0xF000},
-            new Instruction() { Opcode=0x00E0,Mask=0xFFFF, Execute = args =>
+            new Instruction() { Opcode=0x00E0,Mask=0xFFFF,
+            Execute = args =>
             {
                 Array.Clear(surface);
                 return true;
-            }},
-            new Instruction() { Opcode=0x00EE,Mask=0xFFFF, Execute = args =>
+            },
+            Emit = args =>
             {
-                ushort returnAddress;
-                if(this.stack.TryPop(out returnAddress))
+                return "CLS";
+            }},
+
+            new Instruction() { Opcode=0x00EE,Mask=0xFFFF,
+            Execute = args =>
+            {
+                if(this.stack.TryPop(out ushort returnAddress))
                 {
                     this.ProgramCounter = returnAddress;
                 }
@@ -108,20 +115,39 @@ public class Chip8VM
                     throw new ArgumentException("Error. Stack empty while trying to return from subroutine");
                 }
                 return false;
+            },
+            Emit = args =>
+            {
+                return "RET";
             }},
-            new Instruction() { Opcode=0x1000,Mask=0xF000, Execute = args =>
+
+            new Instruction() { Opcode=0x1000,Mask=0xF000,
+            Execute = args =>
             {
                     this.ProgramCounter = Instruction.NNN(args);
                     return false;
+            },
+            Emit = args=>
+            {
+                return $"JP 0x{Instruction.NNN(args):X4}";
             }},
-            new Instruction() { Opcode=0x2000,Mask=0xF000, Execute = args =>
+
+            new Instruction() { Opcode=0x2000,Mask=0xF000,
+            Execute = args =>
             {
                 this.stack.Push((ushort)(ProgramCounter+2));
                 this.ProgramCounter = Instruction.NNN(args);
 
                 return false;
-            }},
-            new Instruction() { Opcode=0x3000,Mask=0xF000, Execute = args =>
+            },
+            Emit = args=>
+            {
+                return $"CALL 0x{Instruction.NNN(args):X4}";
+            }
+            },
+
+            new Instruction() { Opcode=0x3000,Mask=0xF000,
+            Execute = args =>
             {
                 byte registerIndex = Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
@@ -133,8 +159,15 @@ public class Chip8VM
                     ProgramCounter+= 4;
                 }
                 return !valuesEqual;
-            }},
-            new Instruction() { Opcode=0x4000,Mask=0xF000, Execute = args =>
+            },
+            Emit = args =>
+            {
+                return $"SE V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
+            }
+            },
+
+            new Instruction() { Opcode=0x4000,Mask=0xF000,
+            Execute = args =>
             {
                 byte registerIndex = Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
@@ -146,8 +179,14 @@ public class Chip8VM
                     ProgramCounter+= 4;
                 }
                 return valuesEqual;
+            },
+            Emit = args =>
+            {
+                return $"SNE V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
             }},
-            new Instruction() { Opcode=0x5000,Mask=0xF00F, Execute = args =>
+
+            new Instruction() { Opcode=0x5000,Mask=0xF00F,
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -159,16 +198,29 @@ public class Chip8VM
                     ProgramCounter +=4;
                 }
                 return !valuesEqual;
+            },
+            Emit = args =>
+            {
+                return $"SE V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x6000,Mask=0xF000, Execute = args =>
+
+            new Instruction() { Opcode=0x6000,Mask=0xF000,
+            Execute = args =>
             {
                 byte registerIndex  = Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
                 byte newRegisterValue =  Instruction.NN(args);
                 registers[registerIndex] = newRegisterValue;
                 return true;
+            },
+            Emit = args=>
+            {
+                return $"LD V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
+
             }},
-            new Instruction() { Opcode=0x7000,Mask=0xF000, Execute = args =>
+            
+            new Instruction() { Opcode=0x7000,Mask=0xF000,
+            Execute = args =>
             {
                 int registerIndex  =  Instruction.X(args);
                 CheckRegisterIndex(registerIndex);
@@ -176,8 +228,14 @@ public class Chip8VM
                 registers[registerIndex] += valueToAdd; //this will wrap if overflow happens. Not sure if that is correct behavior. 
                 return true;
 
+            },
+            Emit = args=>
+            {
+                return $"ADD V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
             }},
-            new Instruction() { Opcode=0x8000,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x8000,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -185,8 +243,14 @@ public class Chip8VM
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = registers[registerYIndex];
                 return true;
+            },
+            Emit = args=>
+            {
+                return $"LD V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8001,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x8001,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -195,8 +259,14 @@ public class Chip8VM
                 registers[registerXIndex] = (byte)(registers[registerXIndex] | registers[registerYIndex]);
                 registers[0xF] = 0;
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"OR V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8002,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x8002,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -206,8 +276,14 @@ public class Chip8VM
                 registers[0xF] = 0;
                 return true;
 
+            },
+            Emit = args =>
+            {
+                return $"AND V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8003,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x8003,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -217,8 +293,14 @@ public class Chip8VM
                 registers[0xF] = 0;
                 return true;
 
+            },
+            Emit= args =>
+            {
+                return $"XOR V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8004,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x8004,Mask=0xF00F,
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -238,8 +320,14 @@ public class Chip8VM
                     registers[0xF] = 0;
                 }
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"ADD V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8005,Mask=0xF00F, Execute = args =>
+
+            new Instruction() { Opcode=0x8005,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -251,8 +339,14 @@ public class Chip8VM
                 registers[registerXIndex] = (byte)(xValue - yValue);
                 registers[0xF] = (byte)(xValue>yValue ? 1 : 0);
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"SUB V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8006,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x8006,Mask=0xF00F, 
+            Execute = args =>
             {
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
@@ -270,8 +364,14 @@ public class Chip8VM
                 registers[0xF] =(byte)(xValue & 0x1);
 
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"SHR V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x8007,Mask=0xF00F, Execute = args =>
+
+            new Instruction() { Opcode=0x8007,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -285,8 +385,14 @@ public class Chip8VM
                 registers[0xF] = (byte)(xValue<yValue ? 1 : 0);
                 return true;
 
+            },
+            Emit = args =>
+            {
+                return $"SUBN V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x800E,Mask=0xF00F, Execute = args =>
+
+            new Instruction() { Opcode=0x800E,Mask=0xF00F, 
+            Execute = args =>
             {
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
                 //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
@@ -303,8 +409,14 @@ public class Chip8VM
                 registers[0xF] =(byte)((xValue & 0x80) >>7);
                 return true;
 
+            },
+            Emit = args =>
+            {
+                return $"SHL V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0x9000,Mask=0xF00F, Execute = args =>
+            
+            new Instruction() { Opcode=0x9000,Mask=0xF00F, 
+            Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
                 byte registerYIndex = Instruction.Y(args);
@@ -317,13 +429,25 @@ public class Chip8VM
                 }
                 return valuesEqual;
 
+            },
+            Emit = args =>
+            {
+                return $"SNE V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            new Instruction() { Opcode=0xA000,Mask=0xF000, Execute = args =>
+
+            new Instruction() { Opcode=0xA000,Mask=0xF000, 
+            Execute = args =>
             {
                 IRegister = Instruction.NNN(args);
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"LD I, 0x{Instruction.NNN(args)}";
             }},
-            new Instruction() { Opcode=0xB000,Mask=0xF000, Execute = args =>
+
+            new Instruction() { Opcode=0xB000,Mask=0xF000, 
+            Execute = args =>
             {
 
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
@@ -335,8 +459,14 @@ public class Chip8VM
                 ProgramCounter = (ushort)(jumpBase + jumpOffset);
 
                 return false;
+            },
+            Emit = args =>
+            {
+                return $"JP V0, 0x{Instruction.NNN(args)}";
             }},
-            new Instruction() { Opcode=0xC000,Mask=0xF000, Execute = args =>
+
+            new Instruction() { Opcode=0xC000,Mask=0xF000, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
@@ -346,8 +476,14 @@ public class Chip8VM
                 r.NextBytes(random);
                 registers[registerXIndex] = (byte)(random[0] & nnArgs);
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"RND V{Instruction.X(args)}, 0x{Instruction.NN(args)}";
             }},
-            new Instruction() { Opcode=0xD000,Mask=0xF000, Execute = args =>
+            
+            new Instruction() { Opcode=0xD000,Mask=0xF000, 
+            Execute = args =>
             {
                 registers[0xF] = 0;
                 byte registerXIndex = Instruction.X(args);
@@ -400,8 +536,14 @@ public class Chip8VM
 
                 }
                return true;
+            },
+            Emit= args =>
+            {
+                return $"DRW V{Instruction.X(args)}, V{Instruction.Y(args)}, 0x{Instruction.N(args)}";
             }},
-            new Instruction() { Opcode=0xE09E,Mask=0xF0FF, Execute = args =>
+
+            new Instruction() { Opcode=0xE09E,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
@@ -420,8 +562,14 @@ public class Chip8VM
                     ProgramCounter += 2;
                 }
                 return false;
+            },
+            Emit= args =>
+            {
+                return $"SKP V{Instruction.X(args)}";
             }},
-            new Instruction() { Opcode=0xE0A1,Mask=0xF0FF, Execute = args =>
+            
+            new Instruction() { Opcode=0xE0A1,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
@@ -441,16 +589,27 @@ public class Chip8VM
                 }
                 return false;
 
-            }
             },
-            new Instruction() { Opcode=0xF007,Mask=0xF0FF, Execute = args =>
+            Emit = args =>
+            {
+                return $"SKNP V{Instruction.X(args)}";
+            }},
+            
+            new Instruction() { Opcode=0xF007,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 registers[registerXIndex] = delayTimer;
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"LD V{Instruction.X(args)}, DT";
             }},
-            new Instruction() { Opcode=0xF00A,Mask=0xF0FF, Execute = args =>
+            
+            new Instruction() { Opcode=0xF00A,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
@@ -463,22 +622,40 @@ public class Chip8VM
                 }
 
                 return false;
+            },
+            Emit = args =>
+            {
+                return $"LD V{Instruction.X(args)}, K";
             }},
-            new Instruction() { Opcode=0xF015,Mask=0xF0FF, Execute = args =>
+
+            new Instruction() { Opcode=0xF015,Mask=0xF0FF,
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 delayTimer = registers[registerXIndex] ;
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"LD DT, V{Instruction.X(args)}";
             }},
-            new Instruction() { Opcode=0xF018,Mask=0xF0FF, Execute = args =>
+            
+            new Instruction() { Opcode=0xF018,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 soundTimer = registers[registerXIndex] ;
                 return true;
+            },
+            Emit =args =>
+            {
+                return $"LD ST V{Instruction.X(args)}";
             }},
-            new Instruction() { Opcode=0xF01E,Mask=0xF0FF, Execute = args =>
+            
+            new Instruction() { Opcode=0xF01E,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
@@ -493,16 +670,28 @@ public class Chip8VM
                     registers[0xF] = 1;
                 }
                 return true;
+            },
+            Emit = args=>
+            {
+                return $"ADD I, V{Instruction.X(args)}";
             }},
-            new Instruction() { Opcode=0xF029,Mask=0xF0FF, Execute = args =>
+
+            new Instruction() { Opcode=0xF029,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte registerValue = registers[registerXIndex];
                 IRegister = (ushort)(registerValue * 5);
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"LD F, V{Instruction.X(args)}";
             }},
-            new Instruction() { Opcode=0xF033,Mask=0xF0FF, Execute = args =>
+            
+            new Instruction() { Opcode=0xF033,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
@@ -516,8 +705,14 @@ public class Chip8VM
                 }
 
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"BCD V{Instruction.X(args)}";
             }},
-            new Instruction() { Opcode=0xF055,Mask=0xF0FF, Execute = args =>
+            
+            new Instruction() { Opcode=0xF055,Mask=0xF0FF, 
+            Execute = args =>
             {
                 int lastRegisterIndex = Instruction.X(args);
                 CheckRegisterIndex(lastRegisterIndex);
@@ -529,7 +724,12 @@ public class Chip8VM
                 }
                 IRegister += (ushort)(lastRegisterIndex +1);
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"LD [I], V{Instruction.X(args)}";
             }},
+
             new Instruction() { Opcode=0xF065,Mask=0xF0FF, Execute = args =>
             {
                 int lastRegisterIndex = Instruction.X(args);
@@ -541,134 +741,163 @@ public class Chip8VM
                 }
                 IRegister += (ushort)(lastRegisterIndex +1);
                 return true;
+            },
+            Emit = args =>
+            {
+                return $"LD V{Instruction.X(args)}, [I]";
             }},
         };
 
-        if (instructions.Count != instructions.DistinctBy(item => item.Opcode).Count())
-        {
-            throw new InvalidOperationException("Duplicates found in instruction set.");
-        }
-
-        StopAndReset();
-    }
-
-    public bool Load(string programSourceFilePath)
-    {
-        try
-        {
-            int bytesCount = 0;
-            using (FileStream programSourceStreamReader = new FileStream(programSourceFilePath, FileMode.Open))
+            if (instructions.Count != instructions.DistinctBy(item => item.Opcode).Count())
             {
-                bytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
+                throw new InvalidOperationException("Duplicates found in instruction set.");
             }
-            loaded = true;
-            ProgramLoaded?.Invoke(this, bytesCount);
-        }
-        catch (Exception ex)
-        {
-            OnNewMessage($"File read error: {ex.Message}");
-        }
-        return loaded;
-    }
 
-    public async Task StartAsync(CancellationToken cancelToken)
-    {
-        if (ct.HasValue)
-        {
             StopAndReset();
         }
-        ct = cancelToken;
 
-        if (loaded)
+        public bool Load(string programSourceFilePath)
         {
-
             try
             {
-                tickTimer.Elapsed += OnTick;
-                tickTimer.Start();
-
-                while (!ct.Value.IsCancellationRequested && tickTimer.IsRunning)
+                int bytesCount = 0;
+                using (FileStream programSourceStreamReader = new FileStream(programSourceFilePath, FileMode.Open))
                 {
-                    await Task.Delay(200).ConfigureAwait(false);
+                    bytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
                 }
+                loaded = true;
+                ProgramLoaded?.Invoke(this, bytesCount);
             }
             catch (Exception ex)
             {
-                //TODO: Add some more information about place in which program failed.
-                OnNewMessage(ex.Message);
+                OnNewMessage($"File read error: {ex.Message}");
             }
-            finally
+            return loaded;
+        }
+
+        public async Task StartAsync(CancellationToken cancelToken)
+        {
+            if (ct.HasValue)
             {
                 StopAndReset();
             }
-        }
-    }
+            ct = cancelToken;
 
-    public void Pause()
-    {
-        tickTimer.Elapsed -= OnTick;
-    }
-
-    public void Go()
-    {
-        tickTimer.Elapsed += OnTick;
-    }
-
-    public void StopAndReset()
-    {
-        if (tickTimer.IsRunning)
-        {
-            tickTimer.Stop();
-        }
-        tickTimer.Elapsed -= OnTick;
-
-        ProgramCounter = 0x200;
-        IRegister = 0;
-        soundTimer = 0;
-        delayTimer = 0;
-        stack.Clear();
-        Array.Clear(surface);
-        Array.Clear(memory);
-        Array.Clear(registers);
-        Array.Copy(font, memory, font.Length);
-        ct = null;
-    }
-
-    public void UpdateKeyState(ushort key, bool pressed)
-    {
-        ushort keyBitValue = (ushort)(1 << key);
-
-        if (pressed)
-        {
-            lastPressedKey = null;
-            pressedKeys |= keyBitValue;
-        }
-        else
-        {
-            lastPressedKey = key;
-            pressedKeys &= (ushort)~keyBitValue;
-        }
-    }
-
-    private void ExecuteInstruction()
-    {
-        try
-        {
-            if (ProgramCounter < memory.Length)
+            if (loaded)
             {
-                byte[] instructionRaw = new byte[] { memory[ProgramCounter], memory[ProgramCounter + 1] };
 
-                ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
-
-                var instruction = instructions.Find(item => (instructionValue & item.Mask) == item.Opcode);
-                if (instruction != null && !(ct.HasValue && ct.Value.IsCancellationRequested))
+                try
                 {
-                    ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
-                    ushort args = (ushort)(instructionValue & argsMask);
+                    tickTimer.Elapsed += OnTick;
+                    tickTimer.Start();
 
-                    if (instruction.Execute != null && instruction.Execute(args))
+                    while (!ct.Value.IsCancellationRequested && tickTimer.IsRunning)
                     {
-                        ProgramCounter += 2;
+                        await Task.Delay(200, cancelToken).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //TODO: Add some more information about place in which program failed.
+                    OnNewMessage(ex.Message);
+                }
+                finally
+                {
+                    StopAndReset();
+                }
+            }
+        }
+
+        public void Pause()
+        {
+            tickTimer.Elapsed -= OnTick;
+        }
+
+        public void Go()
+        {
+            tickTimer.Elapsed += OnTick;
+        }
+
+        public void StopAndReset()
+        {
+            if (tickTimer.IsRunning)
+            {
+                tickTimer.Stop();
+            }
+            tickTimer.Elapsed -= OnTick;
+
+            ProgramCounter = 0x200;
+            IRegister = 0;
+            soundTimer = 0;
+            delayTimer = 0;
+            stack.Clear();
+            Array.Clear(surface);
+            Array.Clear(memory);
+            Array.Clear(registers);
+            Array.Copy(font, memory, font.Length);
+            ct = null;
+        }
+
+        public void UpdateKeyState(ushort key, bool pressed)
+        {
+            ushort keyBitValue = (ushort)(1 << key);
+
+            if (pressed)
+            {
+                lastPressedKey = null;
+                pressedKeys |= keyBitValue;
+            }
+            else
+            {
+                lastPressedKey = key;
+                pressedKeys &= (ushort)~keyBitValue;
+            }
+        }
+
+        public string GetMnemonic(ushort instructionValue)
+        {
+            string result = "unknown";
+            var instruction = instructions.Find(item => (instructionValue & item.Mask) == item.Opcode);
+            if (instruction != null)
+            {
+                ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
+                ushort args = (ushort)(instructionValue & argsMask);
+                if (instruction.Emit != null)
+                {
+                    result = instruction.Emit(args);
+                }
+                else
+                {
+                    result = "none";
+                }
+            }
+            return result;
+        }
+
+        private void ExecuteInstruction()
+        {
+            try
+            {
+                if (ProgramCounter < memory.Length)
+                {
+                    byte[] instructionRaw = new byte[] { memory[ProgramCounter], memory[ProgramCounter + 1] };
+
+                    ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
+
+                    var instruction = instructions.Find(item => (instructionValue & item.Mask) == item.Opcode);
+                    if (instruction != null && !(ct.HasValue && ct.Value.IsCancellationRequested))
+                    {
+                        ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
+                        ushort args = (ushort)(instructionValue & argsMask);
+
+                        if (instruction.Execute != null && instruction.Execute(args))
+                        {
+                            ProgramCounter += 2;
+                        }
+                    }
+                    else
+                    {
+                        tickTimer.Stop();
                     }
                 }
                 else
@@ -676,75 +905,71 @@ public class Chip8VM
                     tickTimer.Stop();
                 }
             }
-            else
+            catch (Exception ex)
             {
-                tickTimer.Stop();
+                OnNewMessage(ex.Message);
             }
         }
-        catch (Exception ex)
-        {
-            OnNewMessage(ex.Message);
-        }
-    }
 
-    private async void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
-    {
-        for (int i = 0; i < instructionsPerFrame; i++)
+        private async void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
         {
-            ExecuteInstruction();
-        }
-
-        try
-        {
-            if (soundTimer < 1)
+            for (int i = 0; i < instructionsPerFrame; i++)
             {
-                soundTimer = 0;
-                await OnBeepStatus(false);
-            }
-            else
-            {
-                soundTimer = (byte)(soundTimer - 1);
-                await OnBeepStatus(true);
+                ExecuteInstruction();
             }
 
-            if (delayTimer > 0)
+            try
             {
-                delayTimer = (byte)(delayTimer - 1);
+                if (soundTimer < 1)
+                {
+                    soundTimer = 0;
+                    await OnBeepStatus(false);
+                }
+                else
+                {
+                    soundTimer = (byte)(soundTimer - 1);
+                    await OnBeepStatus(true);
+                }
+
+                if (delayTimer > 0)
+                {
+                    delayTimer = (byte)(delayTimer - 1);
+                }
+            }
+            finally
+            {
+                TickAutoResetEvent.Set();
             }
         }
-        finally
+
+        private void OnNewMessage(string msg)
         {
-            TickAutoResetEvent.Set();
+            NewMessage?.Invoke(this, msg);
         }
-    }
 
-    private void OnNewMessage(string msg)
-    {
-        NewMessage?.Invoke(this, msg);
-    }
-
-    private async Task OnBeepStatus(bool status)
-    {
-        if (status != beepStatus)
+        private async Task OnBeepStatus(bool status)
         {
-            beepStatus = status;
-            await Task.Run(() => BeepStatus?.Invoke(this, status));
+            if (status != beepStatus)
+            {
+                beepStatus = status;
+                await Task.Run(() => BeepStatus?.Invoke(this, status));
+            }
         }
-    }
 
-    private void CheckMemoryAdders(int memoryAddress)
-    {
-        if (memory.Length < memoryAddress)
+        private void CheckMemoryAdders(int memoryAddress)
         {
-            throw new ArgumentOutOfRangeException($"Address {memoryAddress} out of range.");
+            if (memory.Length < memoryAddress)
+            {
+                throw new ArgumentOutOfRangeException($"Address {memoryAddress} out of range.");
+            }
         }
-    }
 
-    private void CheckRegisterIndex(int registerIndex)
-    {
-        if (registerIndex > registers.Length)
+        private void CheckRegisterIndex(int registerIndex)
         {
-            throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
+            if (registerIndex > registers.Length)
+            {
+                throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
+            }
         }
     }
 }

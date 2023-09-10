@@ -7,11 +7,11 @@ namespace yac8i.gui.sdl
 {
     public class SDLDraw
     {
-        private AutoResetEvent DoFrameAutoResetEvent = new AutoResetEvent(false);
-        private int pitch;
+        private readonly AutoResetEvent DoFrameAutoResetEvent = new AutoResetEvent(false);
+        private readonly int pitch;
         private readonly IntPtr windowTexturePtr;
         private readonly IntPtr rendererPtr;
-        private static Dictionary<SDL.SDL_Keycode, ushort> keysMapping = new Dictionary<SDL.SDL_Keycode, ushort>()
+        private static readonly Dictionary<SDL.SDL_Keycode, ushort> keysMapping = new Dictionary<SDL.SDL_Keycode, ushort>()
             {
                 {SDL.SDL_Keycode.SDLK_1,0x1},
                 {SDL.SDL_Keycode.SDLK_2,0x2},

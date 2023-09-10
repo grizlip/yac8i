@@ -6,7 +6,7 @@ namespace yac8i.gui.sdl
 {
     public class SDLFront
     {
-        private Chip8VM vm;
+        private readonly Chip8VM vm;
         private SDLSound? sdlSound;
         private SDLDraw? sdlDraw;
 

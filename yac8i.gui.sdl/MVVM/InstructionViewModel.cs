@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace yac8i.gui.sdl.MVVM
 {
-
     public class InstructionViewModel : ObservableObject
     {
         public bool PointsToProgramCounter
@@ -15,14 +14,18 @@ namespace yac8i.gui.sdl.MVVM
 
         public ushort Address => address;
 
+        public string Mnemonic => mnemonic;
+
         private readonly ushort opcode;
         private readonly ushort address;
+        private readonly string mnemonic;
         private bool pointsToProgramCounter;
 
-        public InstructionViewModel(ushort opcode, ushort address)
+        public InstructionViewModel(ushort opcode, ushort address, string mnemonic)
         {
             this.opcode = opcode;
             this.address = address;
+            this.mnemonic = mnemonic;
         }
     }
 }

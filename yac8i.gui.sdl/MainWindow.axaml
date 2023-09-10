@@ -64,11 +64,16 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="10" />
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding PointsToProgramCounter, Converter={StaticResource boolConverter}, ConverterParameter='>'}"/>
                                 <TextBlock Grid.Column="1" Text="{Binding Address, Converter={StaticResource hexConverter}}"/>
                                 <TextBlock Grid.Column="2" Text=":"/>
                                 <TextBlock Grid.Column="3" Text="{Binding Opcode, Converter={StaticResource hexConverter}}"/>
+                                <TextBlock Grid.Column="5" Text="Mnemonic"/>
+                                <TextBlock Grid.Column="6" Text="{Binding Mnemonic}"/>
                             </Grid>
                         </DataTemplate>
                      </ListBox.ItemTemplate>

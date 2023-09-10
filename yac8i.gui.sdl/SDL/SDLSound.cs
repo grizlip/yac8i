@@ -8,22 +8,24 @@ namespace yac8i.gui.sdl
 {
     public class SDLSound : IDisposable
     {
-        private Chip8VM vm;
+        private readonly Chip8VM vm;
         private double samplingIndex = 0;
         private const double AMPLITUDE = 28000d;
         private const double SOUND_FREQUENCY = 261.63d;
         private SDL.SDL_AudioSpec have;
-        private uint soundDeviceId;
+        private readonly uint soundDeviceId;
         
         public SDLSound(Chip8VM vm)
         {
             this.vm = vm;
-            SDL.SDL_AudioSpec want = new SDL.SDL_AudioSpec();
-            want.freq = 44100;
-            want.format = SDL.AUDIO_S16SYS;
-            want.channels = 1;
-            want.samples = 512;
-            want.callback = AudioCallback;
+            SDL.SDL_AudioSpec want = new SDL.SDL_AudioSpec
+            {
+                freq = 44100,
+                format = SDL.AUDIO_S16SYS,
+                channels = 1,
+                samples = 512,
+                callback = AudioCallback
+            };
 
             int audioDevicesCount = SDL.SDL_GetNumAudioDevices(0);
             List<string> soundDevicesNames = new List<string>();
