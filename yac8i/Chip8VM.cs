@@ -27,7 +27,7 @@ namespace yac8i
 
         public EventHandler<bool> BeepStatus;
 
-        public AutoResetEvent TickAutoResetEvent = new AutoResetEvent(false);
+        public event EventHandler? Tick;
 
         public ReadOnlyCollection<byte> Memory => new ReadOnlyCollection<byte>(memory);
 
@@ -218,7 +218,7 @@ namespace yac8i
                 return $"LD V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
 
             }},
-            
+
             new Instruction() { Opcode=0x7000,Mask=0xF000,
             Execute = args =>
             {
@@ -233,8 +233,8 @@ namespace yac8i
             {
                 return $"ADD V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
             }},
-            
-            new Instruction() { Opcode=0x8000,Mask=0xF00F, 
+
+            new Instruction() { Opcode=0x8000,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -248,8 +248,8 @@ namespace yac8i
             {
                 return $"LD V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            
-            new Instruction() { Opcode=0x8001,Mask=0xF00F, 
+
+            new Instruction() { Opcode=0x8001,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -264,8 +264,8 @@ namespace yac8i
             {
                 return $"OR V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            
-            new Instruction() { Opcode=0x8002,Mask=0xF00F, 
+
+            new Instruction() { Opcode=0x8002,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -281,8 +281,8 @@ namespace yac8i
             {
                 return $"AND V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            
-            new Instruction() { Opcode=0x8003,Mask=0xF00F, 
+
+            new Instruction() { Opcode=0x8003,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -298,7 +298,7 @@ namespace yac8i
             {
                 return $"XOR V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            
+
             new Instruction() { Opcode=0x8004,Mask=0xF00F,
             Execute = args =>
             {
@@ -326,7 +326,7 @@ namespace yac8i
                 return $"ADD V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
 
-            new Instruction() { Opcode=0x8005,Mask=0xF00F, 
+            new Instruction() { Opcode=0x8005,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -344,8 +344,8 @@ namespace yac8i
             {
                 return $"SUB V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            
-            new Instruction() { Opcode=0x8006,Mask=0xF00F, 
+
+            new Instruction() { Opcode=0x8006,Mask=0xF00F,
             Execute = args =>
             {
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
@@ -370,7 +370,7 @@ namespace yac8i
                 return $"SHR V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
 
-            new Instruction() { Opcode=0x8007,Mask=0xF00F, 
+            new Instruction() { Opcode=0x8007,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -391,7 +391,7 @@ namespace yac8i
                 return $"SUBN V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
 
-            new Instruction() { Opcode=0x800E,Mask=0xF00F, 
+            new Instruction() { Opcode=0x800E,Mask=0xF00F,
             Execute = args =>
             {
                 //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
@@ -414,8 +414,8 @@ namespace yac8i
             {
                 return $"SHL V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
-            
-            new Instruction() { Opcode=0x9000,Mask=0xF00F, 
+
+            new Instruction() { Opcode=0x9000,Mask=0xF00F,
             Execute = args =>
             {
                 byte registerXIndex = Instruction.X(args);
@@ -435,7 +435,7 @@ namespace yac8i
                 return $"SNE V{Instruction.X(args)}, V{Instruction.Y(args)}";
             }},
 
-            new Instruction() { Opcode=0xA000,Mask=0xF000, 
+            new Instruction() { Opcode=0xA000,Mask=0xF000,
             Execute = args =>
             {
                 IRegister = Instruction.NNN(args);
@@ -446,7 +446,7 @@ namespace yac8i
                 return $"LD I, 0x{Instruction.NNN(args)}";
             }},
 
-            new Instruction() { Opcode=0xB000,Mask=0xF000, 
+            new Instruction() { Opcode=0xB000,Mask=0xF000,
             Execute = args =>
             {
 
@@ -465,7 +465,7 @@ namespace yac8i
                 return $"JP V0, 0x{Instruction.NNN(args)}";
             }},
 
-            new Instruction() { Opcode=0xC000,Mask=0xF000, 
+            new Instruction() { Opcode=0xC000,Mask=0xF000,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -481,8 +481,8 @@ namespace yac8i
             {
                 return $"RND V{Instruction.X(args)}, 0x{Instruction.NN(args)}";
             }},
-            
-            new Instruction() { Opcode=0xD000,Mask=0xF000, 
+
+            new Instruction() { Opcode=0xD000,Mask=0xF000,
             Execute = args =>
             {
                 registers[0xF] = 0;
@@ -542,7 +542,7 @@ namespace yac8i
                 return $"DRW V{Instruction.X(args)}, V{Instruction.Y(args)}, 0x{Instruction.N(args)}";
             }},
 
-            new Instruction() { Opcode=0xE09E,Mask=0xF0FF, 
+            new Instruction() { Opcode=0xE09E,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -567,8 +567,8 @@ namespace yac8i
             {
                 return $"SKP V{Instruction.X(args)}";
             }},
-            
-            new Instruction() { Opcode=0xE0A1,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xE0A1,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -594,8 +594,8 @@ namespace yac8i
             {
                 return $"SKNP V{Instruction.X(args)}";
             }},
-            
-            new Instruction() { Opcode=0xF007,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xF007,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -607,8 +607,8 @@ namespace yac8i
             {
                 return $"LD V{Instruction.X(args)}, DT";
             }},
-            
-            new Instruction() { Opcode=0xF00A,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xF00A,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -640,8 +640,8 @@ namespace yac8i
             {
                 return $"LD DT, V{Instruction.X(args)}";
             }},
-            
-            new Instruction() { Opcode=0xF018,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xF018,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -653,8 +653,8 @@ namespace yac8i
             {
                 return $"LD ST V{Instruction.X(args)}";
             }},
-            
-            new Instruction() { Opcode=0xF01E,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xF01E,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -676,7 +676,7 @@ namespace yac8i
                 return $"ADD I, V{Instruction.X(args)}";
             }},
 
-            new Instruction() { Opcode=0xF029,Mask=0xF0FF, 
+            new Instruction() { Opcode=0xF029,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -689,8 +689,8 @@ namespace yac8i
             {
                 return $"LD F, V{Instruction.X(args)}";
             }},
-            
-            new Instruction() { Opcode=0xF033,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xF033,Mask=0xF0FF,
             Execute = args =>
             {
                 int registerXIndex = Instruction.X(args);
@@ -710,8 +710,8 @@ namespace yac8i
             {
                 return $"BCD V{Instruction.X(args)}";
             }},
-            
-            new Instruction() { Opcode=0xF055,Mask=0xF0FF, 
+
+            new Instruction() { Opcode=0xF055,Mask=0xF0FF,
             Execute = args =>
             {
                 int lastRegisterIndex = Instruction.X(args);
@@ -911,9 +911,11 @@ namespace yac8i
             }
         }
 
-        private async void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
+        private void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
         {
-            for (int i = 0; i < instructionsPerFrame; i++)
+            int delayedInstructions = (int)Math.Floor(instructionsPerFrame * (args.Delay / tickTimer.Interval));
+
+            for (int i = 0; i < instructionsPerFrame + delayedInstructions; i++)
             {
                 ExecuteInstruction();
             }
@@ -923,12 +925,12 @@ namespace yac8i
                 if (soundTimer < 1)
                 {
                     soundTimer = 0;
-                    await OnBeepStatus(false);
+                    OnBeepStatus(false);
                 }
                 else
                 {
                     soundTimer = (byte)(soundTimer - 1);
-                    await OnBeepStatus(true);
+                    OnBeepStatus(true);
                 }
 
                 if (delayTimer > 0)
@@ -938,7 +940,7 @@ namespace yac8i
             }
             finally
             {
-                TickAutoResetEvent.Set();
+                Tick?.Invoke(this,EventArgs.Empty);
             }
         }
 
@@ -947,12 +949,12 @@ namespace yac8i
             NewMessage?.Invoke(this, msg);
         }
 
-        private async Task OnBeepStatus(bool status)
+        private void OnBeepStatus(bool status)
         {
             if (status != beepStatus)
             {
                 beepStatus = status;
-                await Task.Run(() => BeepStatus?.Invoke(this, status));
+                Task.Run(() => BeepStatus?.Invoke(this, status));
             }
         }
 

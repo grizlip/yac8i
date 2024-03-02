@@ -67,7 +67,7 @@ namespace yac8i.gui.sdl
                 throw new Exception($"There was an issue reading pitch.  {SDL.SDL_GetError()}");
             }
 
-
+            vm.Tick += OnTick;
             sdlDraw = new SDLDraw(pitch, windowTexturePtr, rendererPtr, vm);
             // Start main drawing loop
             sdlDraw.Run();
@@ -75,19 +75,21 @@ namespace yac8i.gui.sdl
 
             // Clean up the resources that were created.
             sdlSound.Dispose();
+            vm.Tick -= OnTick;
             SDL.SDL_DestroyRenderer(rendererPtr);
             SDL.SDL_DestroyWindow(windowPtr);
             SDL.SDL_Quit();
         }
 
-        public void DoFrame()
-        {
-            sdlDraw?.DoFrame();
-        }
-
         public void Stop()
         {
+            vm.Tick -= OnTick;
             sdlDraw?.Stop();
+        }
+
+        private void OnTick(object? sender, EventArgs ags)
+        {
+            sdlDraw?.DoFrame();
         }
     }
 }

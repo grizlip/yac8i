@@ -8,7 +8,12 @@ namespace yac8i.gui.sdl.MVVM
     public class Model : IDisposable
     {
         public event EventHandler? ProgramLoaded;
-        public event EventHandler? Tick;
+        public event EventHandler? Tick
+        {
+            add { vm.Tick += value; }
+            remove { vm.Tick -= value; }
+        }
+
         public IReadOnlyCollection<ushort> Opcodes => opcodes;
 
         public IReadOnlyCollection<byte> Registers => registers;
@@ -20,7 +25,7 @@ namespace yac8i.gui.sdl.MVVM
         private readonly List<byte> registers = new List<byte>();
         private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private Task? vmTask = null;
-        private Task? tickTask = null;
+
         private string lastRomFile;
         private readonly Chip8VM vm;
 
@@ -29,10 +34,10 @@ namespace yac8i.gui.sdl.MVVM
         {
             this.vm = vm;
             sdlFront = new SDLFront(vm);
-            using (ExecutionContext.SuppressFlow())
-            {
-                Task.Run(() => sdlFront.InitializeAndStart());
-            }
+
+            //TODO: long running
+            Task.Run(() => sdlFront.InitializeAndStart());
+
             this.vm.ProgramLoaded += OnProgramLoaded;
             this.lastRomFile = string.Empty;
             UpdateOpcodes();
@@ -59,10 +64,6 @@ namespace yac8i.gui.sdl.MVVM
             {
                 vmTask?.Wait();
             }
-            if ((!tickTask?.IsCompleted) ?? false)
-            {
-                tickTask?.Wait();
-            }
 
             cancellationTokenSource.Dispose();
             cancellationTokenSource = new CancellationTokenSource();
@@ -78,12 +79,6 @@ namespace yac8i.gui.sdl.MVVM
             }
             var token = cancellationTokenSource.Token;
             vmTask = vm.StartAsync(token);
-
-            using (ExecutionContext.SuppressFlow())
-            {
-                tickTask = Task.Run(() => OnVmTickAsync(token));
-            }
-
         }
 
         public void Pause()
@@ -108,27 +103,11 @@ namespace yac8i.gui.sdl.MVVM
             {
                 vmTask?.Wait();
             }
-            if (!tickTask?.IsCompleted ?? false)
-            {
-                tickTask?.Wait();
-            }
             cancellationTokenSource.Dispose();
             vmTask?.Dispose();
-            tickTask?.Dispose();
             sdlFront.Stop();
         }
 
-        private void OnVmTickAsync(CancellationToken token)
-        {
-            while (!token.IsCancellationRequested)
-            {
-                if (vm.TickAutoResetEvent.WaitOne(1))
-                {
-                    Tick?.Invoke(this, EventArgs.Empty);
-                    sdlFront?.DoFrame();
-                }
-            }
-        }
 
         private void UpdateOpcodes(int bytesCount = 0)
         {
