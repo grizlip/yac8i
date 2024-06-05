@@ -92,6 +92,11 @@ namespace yac8i.gui.sdl.MVVM
             vm.Go();
         }
 
+        public void Step()
+        {
+            vm.Step();
+        }
+
         public void Reset()
         {
             Load(lastRomFile);

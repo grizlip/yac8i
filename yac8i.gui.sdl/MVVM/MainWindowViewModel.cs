@@ -135,7 +135,8 @@ namespace yac8i.gui.sdl.MVVM
 
         private void StepCommandExecute()
         {
-            throw new NotImplementedException();
+            model.Step();
+            UpdateGUI();
         }
 
         private void RestartCommandExecute()

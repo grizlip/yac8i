@@ -768,7 +768,7 @@ namespace yac8i
             try
             {
                 int bytesCount = 0;
-                using (FileStream programSourceStreamReader = new FileStream(programSourceFilePath, FileMode.Open))
+                using (FileStream programSourceStreamReader = new(programSourceFilePath, FileMode.Open))
                 {
                     bytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
                 }
@@ -929,7 +929,7 @@ namespace yac8i
                         //      here we should return some flag, that tells us we should stop reacting to the elapsed 
                         //      event, and no we should use Step method to  proceed with code execution
                     }
-                    byte[] instructionRaw = new byte[] { memory[ProgramCounter], memory[ProgramCounter + 1] };
+                    byte[] instructionRaw = [memory[ProgramCounter], memory[ProgramCounter + 1]];
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
