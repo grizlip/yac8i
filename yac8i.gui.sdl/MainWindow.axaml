@@ -19,7 +19,7 @@
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="0" Background="LightBlue" BorderBrush="Black" BorderThickness="2" Padding="15">
+        <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="2" Padding="15">
             <StackPanel>
                 <Button Content="Load" Command="{Binding LoadCommand}"/>
                 <Button Content="Start/Pause" Command="{Binding StartPauseCommand}"/>
