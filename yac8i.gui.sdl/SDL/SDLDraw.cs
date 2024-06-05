@@ -7,11 +7,11 @@ namespace yac8i.gui.sdl
 {
     public class SDLDraw
     {
-        private readonly AutoResetEvent DoFrameAutoResetEvent = new AutoResetEvent(false);
+        private readonly AutoResetEvent DoFrameAutoResetEvent = new(false);
         private readonly int pitch;
         private readonly IntPtr windowTexturePtr;
         private readonly IntPtr rendererPtr;
-        private static readonly Dictionary<SDL.SDL_Keycode, ushort> keysMapping = new Dictionary<SDL.SDL_Keycode, ushort>()
+        private static readonly Dictionary<SDL.SDL_Keycode, ushort> keysMapping = new()
             {
                 {SDL.SDL_Keycode.SDLK_1,0x1},
                 {SDL.SDL_Keycode.SDLK_2,0x2},
@@ -117,7 +117,7 @@ namespace yac8i.gui.sdl
         private bool TryUpdatePixel(byte[] surface, int x, int y, bool set = false)
         {
             bool result = true;
-            var index = (y * PixelConfig.PixelSize * pitch + x * PixelConfig.PixelSize * 4);
+            var index = y * PixelConfig.PixelSize * pitch + x * PixelConfig.PixelSize * 4;
             if ((index + PixelConfig.PixelSize) >= surface.Length)
             {
                 result = false;

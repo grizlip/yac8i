@@ -17,9 +17,9 @@ namespace yac8i.gui.sdl.MVVM
         public ICommand RestartCommand { get; }
         public ICommand StepCommand { get; }
 
-        public ObservableCollection<RegisterViewModel> Registers { get; set; } = new ObservableCollection<RegisterViewModel>();
+        public ObservableCollection<RegisterViewModel> Registers { get; set; } = [];
 
-        public ObservableCollection<InstructionViewModel> Instructions { get; set; } = new ObservableCollection<InstructionViewModel>();
+        public ObservableCollection<InstructionViewModel> Instructions { get; set; } = [];
 
         public int SelectedIndex
         {
@@ -168,11 +168,11 @@ namespace yac8i.gui.sdl.MVVM
 
                     new("Rom files")
                         {
-                            Patterns = new List<string>() {"rom"}
+                            Patterns = new List<string>() {"*.rom"}
                         },
-                    new("Rom files")
+                    new("ch8 files")
                         {
-                            Patterns = new List<string>() {"ch8"}
+                            Patterns = new List<string>() {"*.ch8"}
                         },
                     new("All files")
                         {
@@ -208,7 +208,6 @@ namespace yac8i.gui.sdl.MVVM
                 Instructions.Clear();
                 foreach (var opcode in model.Opcodes)
                 {
-
                     Instructions.Add(new InstructionViewModel(opcode, address, model.GetMnemonic(opcode))); //TODO: make model to provide mnemonic from VM
                     address += 2;
                 }

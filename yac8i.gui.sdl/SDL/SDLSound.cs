@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System;
 using SDL2;
-using System.Linq;
 
 namespace yac8i.gui.sdl
 {
@@ -18,7 +17,7 @@ namespace yac8i.gui.sdl
         public SDLSound(Chip8VM vm)
         {
             this.vm = vm;
-            SDL.SDL_AudioSpec want = new SDL.SDL_AudioSpec
+            SDL.SDL_AudioSpec want = new()
             {
                 freq = 44100,
                 format = SDL.AUDIO_S16SYS,
@@ -28,16 +27,16 @@ namespace yac8i.gui.sdl
             };
 
             int audioDevicesCount = SDL.SDL_GetNumAudioDevices(0);
-            List<string> soundDevicesNames = new List<string>();
+            List<string> soundDevicesNames = [];
             for (int i = 0; i < audioDevicesCount; i++)
             {
                 soundDevicesNames.Add(SDL.SDL_GetAudioDeviceName(i, 0));
             }
 
-            if (soundDevicesNames.Any())
+            if (soundDevicesNames.Count != 0)
             {
                 //TODO: make it possible to choose sound device
-                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[1], 0, ref want, out have, 0);
+                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[0], 0, ref want, out have, 0);
 
                 if (soundDeviceId == 0)
                 {

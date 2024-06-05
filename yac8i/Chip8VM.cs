@@ -9,10 +9,8 @@ using System.Collections.Concurrent;
 
 namespace yac8i
 {
-
     public class Chip8VM
     {
-
         public event EventHandler<int> ProgramLoaded;
 
         public bool[,] Surface

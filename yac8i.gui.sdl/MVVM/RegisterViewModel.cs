@@ -36,6 +36,5 @@ namespace yac8i.gui.sdl.MVVM
             registerValue = string.Empty;
 
         }
-
     }
 }
