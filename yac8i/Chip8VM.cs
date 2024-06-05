@@ -5,7 +5,7 @@ using System.Collections;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.ObjectModel;
+using System.Collections.Concurrent;
 
 namespace yac8i
 {
@@ -27,14 +27,16 @@ namespace yac8i
 
         public EventHandler<bool> BeepStatus;
 
-        public event EventHandler? Tick;
+        public event EventHandler Tick;
 
-        public ReadOnlyCollection<byte> Memory => new ReadOnlyCollection<byte>(memory);
+        public IReadOnlyCollection<byte> Memory => memory;
 
-        public ReadOnlyCollection<byte> Registers => new ReadOnlyCollection<byte>(registers);
+        public IReadOnlyCollection<byte> Registers => registers;
         public ushort IRegister { get; private set; } = 0;
 
         public ushort ProgramCounter { get; private set; } = 0x200;
+
+        public readonly ConcurrentDictionary<ushort, string> Breakpoints = new();
 
         private readonly byte[] font = new byte[] {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -880,6 +882,13 @@ namespace yac8i
             {
                 if (ProgramCounter < memory.Length)
                 {
+                    if (Breakpoints.TryGetValue(ProgramCounter, out var breakpointName))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Breakpoint {breakpointName} hit.");
+                        //TODO: make breakpoints logic
+                        //      here we should return some flag, that tells us we should stop reacting to the elapsed 
+                        //      event, and no we should use Step method to  proceed with code execution
+                    }
                     byte[] instructionRaw = new byte[] { memory[ProgramCounter], memory[ProgramCounter + 1] };
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
@@ -910,12 +919,50 @@ namespace yac8i
                 OnNewMessage(ex.Message);
             }
         }
+        private int instructionsToExecuteInFrame = 0;
+
+        public void Step()
+        {
+            if (instructionsToExecuteInFrame > 0)
+            {
+                ExecuteInstruction();
+                instructionsToExecuteInFrame--;
+            }
+            else if (instructionsToExecuteInFrame == 0)
+            {
+                try
+                {
+                    if (soundTimer < 1)
+                    {
+                        soundTimer = 0;
+                        OnBeepStatus(false);
+                    }
+                    else
+                    {
+                        soundTimer = (byte)(soundTimer - 1);
+                        OnBeepStatus(true);
+                    }
+
+                    if (delayTimer > 0)
+                    {
+                        delayTimer = (byte)(delayTimer - 1);
+                    }
+                }
+                finally
+                {
+                    Tick?.Invoke(this, EventArgs.Empty);
+                }
+                instructionsToExecuteInFrame = instructionsPerFrame;
+            }
+        }
 
         private void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
         {
             int delayedInstructions = (int)Math.Floor(instructionsPerFrame * (args.Delay / tickTimer.Interval));
 
-            for (int i = 0; i < instructionsPerFrame + delayedInstructions; i++)
+            for (instructionsToExecuteInFrame = instructionsPerFrame + delayedInstructions;
+                 0 < instructionsToExecuteInFrame;
+                 instructionsToExecuteInFrame--)
             {
                 ExecuteInstruction();
             }
@@ -940,7 +987,7 @@ namespace yac8i
             }
             finally
             {
-                Tick?.Invoke(this,EventArgs.Empty);
+                Tick?.Invoke(this, EventArgs.Empty);
             }
         }
 

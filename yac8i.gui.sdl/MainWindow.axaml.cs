@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Avalonia.Controls;
 using yac8i.gui.sdl.MVVM;
 
@@ -11,7 +10,7 @@ namespace yac8i.gui.sdl
             InitializeComponent();
         }
 
-        protected override void OnClosing(CancelEventArgs e)
+        protected override void OnClosing(WindowClosingEventArgs e)
         {
             if(DataContext is MainWindowViewModel mwvm)
             {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Linq;
 
 namespace yac8i.gui.sdl.MVVM
 {
@@ -21,9 +22,9 @@ namespace yac8i.gui.sdl.MVVM
 
         public ushort ProgramCounter => vm.ProgramCounter;
 
-        private readonly List<ushort> opcodes = new List<ushort>();
-        private readonly List<byte> registers = new List<byte>();
-        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private readonly List<ushort> opcodes = [];
+        private readonly List<byte> registers = [];
+        private CancellationTokenSource cancellationTokenSource = new();
         private Task? vmTask = null;
 
         private string lastRomFile;
@@ -115,7 +116,7 @@ namespace yac8i.gui.sdl.MVVM
             int bytesCountAdjusted = bytesCount + 512;
             for (int i = 512; i < bytesCountAdjusted; i += 2)
             {
-                byte[] instructionRaw = new byte[] { vm.Memory[i], vm.Memory[i + 1] };
+                byte[] instructionRaw = [vm.Memory.ElementAt(i), vm.Memory.ElementAt(i + 1)];
                 ushort opcode = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
                 opcodes.Add(opcode);
             }

@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia.Platform.Storage;
 
 namespace yac8i.gui.sdl.MVVM
 {
@@ -14,6 +15,7 @@ namespace yac8i.gui.sdl.MVVM
         public ICommand LoadCommand { get; }
         public ICommand StartPauseCommand { get; }
         public ICommand RestartCommand { get; }
+        public ICommand StepCommand { get; }
 
         public ObservableCollection<RegisterViewModel> Registers { get; set; } = new ObservableCollection<RegisterViewModel>();
 
@@ -41,6 +43,7 @@ namespace yac8i.gui.sdl.MVVM
             LoadCommand = new RelayCommand(LoadCommandExecute);
             StartPauseCommand = new RelayCommand(StartPauseCommandExecute, StartPauseCommandCanExecute);
             RestartCommand = new RelayCommand(RestartCommandExecute, RestartCommandCanExecute);
+            StepCommand = new RelayCommand(StepCommandExecute, StepCommandCanExecute);
             for (int i = 0; i < 16; i++)
             {
                 Registers.Add(new RegisterViewModel() { RegisterId = $"0x{i:X}", RegisterValue = "-" });
@@ -103,7 +106,7 @@ namespace yac8i.gui.sdl.MVVM
                     UpdateGUI();
                     (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                     (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-
+                    (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 }
                 else
                 {
@@ -112,11 +115,10 @@ namespace yac8i.gui.sdl.MVVM
                     running = true;
                     (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                     (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                    (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                 }
             }
         }
-
-
 
         private void OnTick(object? sender, EventArgs arg)
         {
@@ -124,6 +126,16 @@ namespace yac8i.gui.sdl.MVVM
             {
                 UpdateGUI();
             });
+        }
+
+        private bool StepCommandCanExecute()
+        {
+            return !running && loaded && started;
+        }
+
+        private void StepCommandExecute()
+        {
+            throw new NotImplementedException();
         }
 
         private void RestartCommandExecute()
@@ -144,24 +156,42 @@ namespace yac8i.gui.sdl.MVVM
 
         private async void LoadCommandExecute()
         {
-            var openFileDialog = new OpenFileDialog();
-            if (openFileDialog.Filters != null)
+            var toplevel = TopLevel.GetTopLevel(mainWindow);
+            if (toplevel != null)
             {
-                openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "rom" } });
-                openFileDialog.Filters.Add(new FileDialogFilter() { Name = "Rom files", Extensions = { "ch8" } });
-                openFileDialog.Filters.Add(new FileDialogFilter() { Name = "All files", Extensions = { "*" } });
-            }
-            openFileDialog.AllowMultiple = false;
+                var romFilePiker = new FilePickerOpenOptions
+                {
+                    Title = "Open ROM File",
+                    AllowMultiple = false,
+                    FileTypeFilter = new List<FilePickerFileType>() {
 
-            var result = await openFileDialog.ShowAsync(mainWindow);
-            if (result?.Length == 1)
-            {
-                model.Load(result[0]);
+                    new("Rom files")
+                        {
+                            Patterns = new List<string>() {"rom"}
+                        },
+                    new("Rom files")
+                        {
+                            Patterns = new List<string>() {"ch8"}
+                        },
+                    new("All files")
+                        {
+                            Patterns = new List<string>() {"*"}
+                        }
+                    }
+                };
+                var files = await toplevel.StorageProvider.OpenFilePickerAsync(romFilePiker);
+
+                if (files.Count >= 1 && files[0].TryGetLocalPath() is string filePath)
+                {
+                    model.Load(filePath);
+                    loaded = true;
+                    running = false;
+                    started = false;
+                    (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                    (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                    (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                }
             }
-            loaded = true;
-            running = false;
-            started = false;
-            (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
         }
 
         private void OnProgramLoaded(object? sender, EventArgs args)
@@ -177,7 +207,7 @@ namespace yac8i.gui.sdl.MVVM
                 Instructions.Clear();
                 foreach (var opcode in model.Opcodes)
                 {
-                    
+
                     Instructions.Add(new InstructionViewModel(opcode, address, model.GetMnemonic(opcode))); //TODO: make model to provide mnemonic from VM
                     address += 2;
                 }

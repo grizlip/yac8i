@@ -23,12 +23,13 @@
             <StackPanel>
                 <Button Content="Load" Command="{Binding LoadCommand}"/>
                 <Button Content="Start/Pause" Command="{Binding StartPauseCommand}"/>
+                <Button Content="Step" Command="{Binding StepCommand}"/>
                 <Button Content="Restart" Command="{Binding RestartCommand}"/>
             </StackPanel>
         </Border>
         <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2">
             <Label Content="Registers:"/>
-            <ItemsControl Items="{Binding Registers}">
+            <ItemsControl ItemsSource="{Binding Registers}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel />
@@ -53,7 +54,7 @@
         <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" >
             <Label Content="Hex:" />
                 <ListBox Height="400"
-                         Items="{Binding Instructions}" 
+                         ItemsSource="{Binding Instructions}" 
                          AutoScrollToSelectedItem="True"
                          SelectedIndex="{Binding SelectedIndex}">
                      <ListBox.ItemTemplate>
