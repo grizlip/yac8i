@@ -35,7 +35,7 @@ namespace yac8i
 
         public ushort ProgramCounter { get; private set; } = 0x200;
 
-        public readonly ConcurrentDictionary<ushort, string> Breakpoints = new();
+
 
         private readonly byte[] font = [
                                     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -56,6 +56,9 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
 
+        public IReadOnlyDictionary<ushort, string> CurrentBreakpoints => Breakpoints;
+
+        private readonly ConcurrentDictionary<ushort, string> Breakpoints = new();
 
         private readonly HighResolutionTimer tickTimer = new(1000f / 60f); //60 times per second
 
@@ -878,6 +881,28 @@ namespace yac8i
             }
         }
 
+        public bool TrySetBreakpoint(ushort address, string name)
+        {
+            return Breakpoints.TryAdd(address, name);
+        }
+
+        public bool TryRemoveBreakpoint(ushort address)
+        {
+            return Breakpoints.Remove(address, out var _);
+        }
+
+        public List<(string Name, ushort Address, string Mnemonic)> GetBreakpoints()
+        {
+            List<(string Name, ushort Address, string Mnemonic)> result = [];
+
+            foreach (var breakpoint in Breakpoints)
+            {
+                result.Add((breakpoint.Value, breakpoint.Key, GetMnemonic(GetOpcode(breakpoint.Key))));
+            }
+
+            return result;
+        }
+
         public void UpdateKeyState(ushort key, bool pressed)
         {
             ushort keyBitValue = (ushort)(1 << key);
@@ -912,6 +937,16 @@ namespace yac8i
                 }
             }
             return result;
+        }
+
+        public ushort GetOpcode(uint instructionAddress)
+        {
+            if (memory.Length < instructionAddress + 1)
+            {
+                throw new ArgumentException("Instruction address out of bounds", $"{nameof(instructionAddress)}");
+            }
+
+            return (ushort)(memory[instructionAddress] << 8 | memory[instructionAddress + 1]);
         }
 
         private void ExecuteInstruction()

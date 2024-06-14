@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
-using System.Linq;
 
 namespace yac8i.gui.sdl.MVVM
 {
@@ -119,11 +118,9 @@ namespace yac8i.gui.sdl.MVVM
         {
             opcodes.Clear();
             int bytesCountAdjusted = bytesCount + 512;
-            for (int i = 512; i < bytesCountAdjusted; i += 2)
+            for (uint i = 512; i < bytesCountAdjusted; i += 2)
             {
-                byte[] instructionRaw = [vm.Memory.ElementAt(i), vm.Memory.ElementAt(i + 1)];
-                ushort opcode = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
-                opcodes.Add(opcode);
+                opcodes.Add(vm.GetOpcode(i));
             }
         }
 
