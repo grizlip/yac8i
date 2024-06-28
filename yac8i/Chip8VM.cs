@@ -56,9 +56,7 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
 
-        public IReadOnlyDictionary<ushort, string> CurrentBreakpoints => Breakpoints;
-
-        private readonly ConcurrentDictionary<ushort, string> Breakpoints = new();
+        public readonly ConcurrentDictionary<ushort, BreakpointInfo> Breakpoints = [];
 
         private readonly HighResolutionTimer tickTimer = new(1000f / 60f); //60 times per second
 
@@ -881,28 +879,6 @@ namespace yac8i
             }
         }
 
-        public bool TrySetBreakpoint(ushort address, string name)
-        {
-            return Breakpoints.TryAdd(address, name);
-        }
-
-        public bool TryRemoveBreakpoint(ushort address)
-        {
-            return Breakpoints.Remove(address, out var _);
-        }
-
-        public List<(string Name, ushort Address, string Mnemonic)> GetBreakpoints()
-        {
-            List<(string Name, ushort Address, string Mnemonic)> result = [];
-
-            foreach (var breakpoint in Breakpoints)
-            {
-                result.Add((breakpoint.Value, breakpoint.Key, GetMnemonic(GetOpcode(breakpoint.Key))));
-            }
-
-            return result;
-        }
-
         public void UpdateKeyState(ushort key, bool pressed)
         {
             ushort keyBitValue = (ushort)(1 << key);
@@ -955,13 +931,12 @@ namespace yac8i
             {
                 if (ProgramCounter < memory.Length)
                 {
-                    if (Breakpoints.TryGetValue(ProgramCounter, out var breakpointName))
+                    if (Breakpoints.TryGetValue(ProgramCounter, out var breakpointInfo))
                     {
-                        System.Diagnostics.Debug.WriteLine($"Breakpoint {breakpointName} hit.");
-                        //TODO: make breakpoints logic
-                        //      here we should return some flag, that tells us we should stop reacting to the elapsed 
-                        //      event, and no we should use Step method to  proceed with code execution
+                        breakpointInfo.OnHit();
+                        Pause();
                     }
+                    
                     byte[] instructionRaw = [memory[ProgramCounter], memory[ProgramCounter + 1]];
 
                     ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
