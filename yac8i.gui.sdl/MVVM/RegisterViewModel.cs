@@ -6,25 +6,14 @@ namespace yac8i.gui.sdl.MVVM
     {
         public string RegisterId
         {
-            get
-            {
-                return registerId;
-            }
-            set
-            {
-                SetProperty(ref registerId, value);
-            }
+            get => registerId;
+            set => SetProperty(ref registerId, value);
         }
+        
         public string RegisterValue
         {
-            get
-            {
-                return registerValue;
-            }
-            set
-            {
-                SetProperty(ref registerValue, value);
-            }
+            get => registerValue;
+            set => SetProperty(ref registerValue, value);
         }
 
         private string registerId;
@@ -34,7 +23,6 @@ namespace yac8i.gui.sdl.MVVM
         {
             registerId = string.Empty;
             registerValue = string.Empty;
-
         }
     }
 }
