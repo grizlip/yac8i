@@ -7,6 +7,8 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Avalonia.Platform.Storage;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace yac8i.gui.sdl.MVVM
 {
@@ -17,9 +19,11 @@ namespace yac8i.gui.sdl.MVVM
         public ICommand RestartCommand { get; }
         public ICommand StepCommand { get; }
 
-        public ObservableCollection<RegisterViewModel> Registers { get; set; } = [];
+        public ObservableCollection<RegisterViewModel> Registers { get; } = [];
 
-        public ObservableCollection<InstructionViewModel> Instructions { get; set; } = [];
+        public ObservableCollection<InstructionViewModel> Instructions { get; } = [];
+
+        public ObservableCollection<BreakpointViewModel> Breakpoints { get; } = [];
 
         public int SelectedIndex
         {
@@ -27,19 +31,30 @@ namespace yac8i.gui.sdl.MVVM
             set => SetProperty(ref selectedIndex, value);
         }
 
-        private readonly Model model;
+        private readonly Chip8VM vm;
         private readonly Window mainWindow;
         private bool started;
         private bool running;
         private bool loaded;
+        private readonly List<ushort> opcodes = [];
+        private CancellationTokenSource cancellationTokenSource = new();
+        private Task? vmTask = null;
+        private readonly SDLFront sdlFront;
+        private string lastRomFile = string.Empty;
         private int selectedIndex;
 
-        public MainWindowViewModel(Model model, Window mainWindow)
+
+        public MainWindowViewModel(Chip8VM vm, Window mainWindow)
         {
-            this.model = model;
+            this.vm = vm;
+            sdlFront = new SDLFront(vm);
+
+            //TODO: long running
+            Task.Run(() => sdlFront.InitializeAndStart());
+
             UpdateInstructions();
             this.mainWindow = mainWindow;
-            this.model.ProgramLoaded += OnProgramLoaded;
+            this.vm.ProgramLoaded += OnProgramLoaded;
             LoadCommand = new RelayCommand(LoadCommandExecute);
             StartPauseCommand = new RelayCommand(StartPauseCommandExecute, StartPauseCommandCanExecute);
             RestartCommand = new RelayCommand(RestartCommandExecute, RestartCommandCanExecute);
@@ -54,25 +69,66 @@ namespace yac8i.gui.sdl.MVVM
 
         public void Dispose()
         {
-            model.Dispose();
+            cancellationTokenSource.Cancel();
+            vm.Tick -= OnTick;
+            if (!vmTask?.IsCompleted ?? false)
+            {
+                vmTask?.Wait();
+            }
+            cancellationTokenSource.Dispose();
+            vmTask?.Dispose();
+            sdlFront.Stop();
+        }
+        
+        public void RemoveBreakpoint(BreakpointViewModel breakpointViewModel)
+        {
+            Breakpoints.Remove(breakpointViewModel);
+            if (vm.TryRemoveBreakpoint(breakpointViewModel.Address, out var removed))
+            {
+                removed.BreakpointHit -= OnBreakpointHit;
+            }
+        }
+        
+        public void AddNewBreakpoint(ushort address)
+        {
+            if (vm.TryAddBreakpoint(address, out var breakpointInfo))
+            {
+                breakpointInfo.BreakpointHit += OnBreakpointHit;
+                Breakpoints.Add(new BreakpointViewModel(breakpointInfo,address));
+            }
+        }
+
+        private void Load(string file)
+        {
+            lastRomFile = file;
+            cancellationTokenSource.Cancel();
+
+            if ((!vmTask?.IsCompleted) ?? false)
+            {
+                vmTask?.Wait();
+            }
+
+            cancellationTokenSource.Dispose();
+            cancellationTokenSource = new CancellationTokenSource();
+            vm.StopAndReset();
+            vm.Load(file);
         }
 
         private void UpdateGUI()
         {
-            model.UpdateRegisters();
-            var regs = new List<byte>(model.Registers);
+            var regs = new List<byte>(vm.Registers);
             int i = 0;
             for (; i < regs.Count; i++)
             {
                 Registers[i].RegisterValue = $"0x{regs[i]:X2}";
             }
-            Registers[i].RegisterValue = $"0x{model.IRegister:X4}";
-            Registers[i + 1].RegisterValue = $"0x{model.ProgramCounter:X4}";
+            Registers[i].RegisterValue = $"0x{vm.IRegister:X4}";
+            Registers[i + 1].RegisterValue = $"0x{vm.ProgramCounter:X4}";
 
             foreach (var instruction in Instructions)
             {
                 instruction.PointsToProgramCounter = false;
-                if (instruction.Address == model.ProgramCounter)
+                if (instruction.Address == vm.ProgramCounter)
                 {
                     instruction.PointsToProgramCounter = true;
                     SelectedIndex = (instruction.Address - 512) / 2;
@@ -100,8 +156,8 @@ namespace yac8i.gui.sdl.MVVM
             {
                 if (running)
                 {
-                    model.Pause();
-                    model.Tick -= OnTick;
+                    vm.Pause();
+                    vm.Tick -= OnTick;
                     running = false;
                     UpdateGUI();
                     (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
@@ -110,8 +166,8 @@ namespace yac8i.gui.sdl.MVVM
                 }
                 else
                 {
-                    model.Go();
-                    model.Tick += OnTick;
+                    vm.Go();
+                    vm.Tick += OnTick;
                     running = true;
                     (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
                     (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
@@ -122,10 +178,7 @@ namespace yac8i.gui.sdl.MVVM
 
         private void OnTick(object? sender, EventArgs arg)
         {
-            Dispatcher.UIThread.Post(() =>
-            {
-                UpdateGUI();
-            });
+            Dispatcher.UIThread.Post(UpdateGUI);
         }
 
         private bool StepCommandCanExecute()
@@ -135,23 +188,29 @@ namespace yac8i.gui.sdl.MVVM
 
         private void StepCommandExecute()
         {
-            model.Step();
+            vm.Step();
             UpdateGUI();
         }
 
         private void RestartCommandExecute()
         {
-            model.Reset();
+            Load(lastRomFile);
             Start();
         }
 
         private void Start()
         {
-            model.Start();
+            if (!vmTask?.IsCompleted ?? false)
+            {
+                return;
+            }
+            var token = cancellationTokenSource.Token;
+            vmTask = vm.StartAsync(token);
+
             started = true;
             (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
             (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-            model.Tick += OnTick;
+            vm.Tick += OnTick;
             running = true;
         }
 
@@ -184,7 +243,7 @@ namespace yac8i.gui.sdl.MVVM
 
                 if (files.Count >= 1 && files[0].TryGetLocalPath() is string filePath)
                 {
-                    model.Load(filePath);
+                    this.Load(filePath);
                     loaded = true;
                     running = false;
                     started = false;
@@ -195,9 +254,20 @@ namespace yac8i.gui.sdl.MVVM
             }
         }
 
-        private void OnProgramLoaded(object? sender, EventArgs args)
+        private void OnProgramLoaded(object? sender, int bytesCount)
         {
+            UpdateOpcodes(bytesCount);
             UpdateInstructions();
+        }
+
+        private void UpdateOpcodes(int bytesCount = 0)
+        {
+            opcodes.Clear();
+            int bytesCountAdjusted = bytesCount + 512;
+            for (uint i = 512; i < bytesCountAdjusted; i += 2)
+            {
+                opcodes.Add(vm.GetOpcode(i));
+            }
         }
 
         private void UpdateInstructions()
@@ -206,11 +276,23 @@ namespace yac8i.gui.sdl.MVVM
             {
                 ushort address = 512;
                 Instructions.Clear();
-                foreach (var opcode in model.Opcodes)
+                foreach (var opcode in opcodes)
                 {
-                    Instructions.Add(new InstructionViewModel(opcode, address, model.GetMnemonic(opcode))); //TODO: make model to provide mnemonic from VM
+                    Instructions.Add(new InstructionViewModel(opcode, address, vm.GetMnemonic(opcode))); //TODO: make model to provide mnemonic from VM
                     address += 2;
                 }
+            });
+        }
+
+        private void OnBreakpointHit(object? sender, EventArgs args)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                running = false;
+                UpdateGUI();
+                (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
             });
         }
     }

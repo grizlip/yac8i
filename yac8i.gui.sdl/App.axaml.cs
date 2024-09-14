@@ -24,9 +24,8 @@ namespace yac8i.gui.sdl
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindow();
-                MainWindowViewModel mwvm = new MainWindowViewModel(new Model(vm), desktop.MainWindow);
 
-                desktop.MainWindow.DataContext = mwvm;
+                desktop.MainWindow.DataContext = new MainWindowViewModel(vm, desktop.MainWindow);
             }
 
             base.OnFrameworkInitializationCompleted();

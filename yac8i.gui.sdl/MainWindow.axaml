@@ -1,7 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="yac8i.gui.sdl.MainWindow" Title="YAC8I"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    mc:Ignorable="d" 
+    x:Class="yac8i.gui.sdl.MainWindow" 
+    Title="YAC8I"
     xmlns:local="clr-namespace:yac8i.gui.sdl.MVVM;assembly=yac8i.gui.sdl">
     <Window.Resources>
         <local:OpcodeToHexConverter x:Key="hexConverter"/>
@@ -26,6 +29,30 @@
                 <Button Content="Step" Command="{Binding StepCommand}"/>
                 <Button Content="Restart" Command="{Binding RestartCommand}"/>
             </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" Padding="5">
+            <DockPanel>
+                <Label Content="Breakpoints" DockPanel.Dock="Top"/>
+                <ListBox DockPanel.Dock="Top"
+                         AutoScrollToSelectedItem="True"
+                         ItemsSource="{Binding Breakpoints}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>    
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>    
+                                <TextBox Grid.Column="0" Text="{Binding Address, Converter={StaticResource hexConverter}}" IsReadOnly="true"/>
+                                <TextBox Grid.Column="1" Text="{Binding Count}" IsReadOnly="true"/>
+                                <Button Grid.Column="2" Click="OnBreakpointRemove" Content="Delete" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </DockPanel>
         </Border>
         <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2">
             <Label Content="Registers:"/>
@@ -59,7 +86,7 @@
                          SelectedIndex="{Binding SelectedIndex}">
                      <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="5">
+                            <Grid  PointerPressed="OnNewBreakpointSet">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="20" />
                                     <ColumnDefinition Width="Auto" />

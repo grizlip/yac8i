@@ -134,7 +134,7 @@ namespace yac8i
             // Elapsed event is never called overlapped with different threads
             if (joinThread && Thread.CurrentThread != _thread)
             {
-                _thread.Join();
+                _thread?.Join();
             }
         }
 

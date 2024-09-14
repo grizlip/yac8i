@@ -56,7 +56,7 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
 
-        public readonly ConcurrentDictionary<ushort, BreakpointInfo> Breakpoints = [];
+        private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
         private readonly HighResolutionTimer tickTimer = new(1000f / 60f); //60 times per second
 
@@ -87,6 +87,8 @@ namespace yac8i
         private CancellationToken? ct;
 
         private readonly int instructionsPerFrame = 7;
+
+        private int programBytesCount = 0;
 
         public Chip8VM()
         {
@@ -762,17 +764,35 @@ namespace yac8i
             StopAndReset();
         }
 
+
+        public bool TryAddBreakpoint(ushort address, out BreakpointInfo breakpointInfo)
+        {
+            bool result = address >= 512 && (address -512) < programBytesCount && address % 2 == 0;
+            breakpointInfo = null;
+            if (result)
+            {
+                breakpointInfo = new BreakpointInfo();
+                result = breakpoints.TryAdd(address, breakpointInfo);
+            }
+            return result;
+        }
+
+        public bool TryRemoveBreakpoint(ushort address, out BreakpointInfo breakpointInfo)
+        {
+            return breakpoints.TryRemove(address, out breakpointInfo);
+        }
+
         public bool Load(string programSourceFilePath)
         {
             try
             {
-                int bytesCount = 0;
+
                 using (FileStream programSourceStreamReader = new(programSourceFilePath, FileMode.Open))
                 {
-                    bytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
+                    programBytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
                 }
                 loaded = true;
-                ProgramLoaded?.Invoke(this, bytesCount);
+                ProgramLoaded?.Invoke(this, programBytesCount);
             }
             catch (Exception ex)
             {
@@ -797,7 +817,7 @@ namespace yac8i
                     tickTimer.Elapsed += OnTick;
                     tickTimer.Start();
 
-                    while (!ct.Value.IsCancellationRequested && tickTimer.IsRunning)
+                    while (!ct.Value.IsCancellationRequested)
                     {
                         await Task.Delay(200, cancelToken).ConfigureAwait(false);
                     }
@@ -816,21 +836,19 @@ namespace yac8i
 
         public void Pause()
         {
-            tickTimer.Elapsed -= OnTick;
+            tickTimer.Stop();
         }
 
         public void Go()
         {
-            tickTimer.Elapsed += OnTick;
+            tickTimer.Start();
         }
 
         public void StopAndReset()
         {
-            if (tickTimer.IsRunning)
-            {
-                tickTimer.Stop();
-            }
+            tickTimer.Stop();
             tickTimer.Elapsed -= OnTick;
+            programBytesCount = 0;
 
             ProgramCounter = 0x200;
             IRegister = 0;
@@ -846,36 +864,39 @@ namespace yac8i
 
         public void Step()
         {
-            if (instructionsToExecuteInFrame > 0)
+            if (!tickTimer.IsRunning)
             {
-                ExecuteInstruction();
-                instructionsToExecuteInFrame--;
-            }
-            else if (instructionsToExecuteInFrame == 0)
-            {
-                try
+                if (instructionsToExecuteInFrame > 0)
                 {
-                    if (soundTimer < 1)
+                    ExecuteInstruction();
+                    instructionsToExecuteInFrame--;
+                }
+                else if (instructionsToExecuteInFrame == 0)
+                {
+                    try
                     {
-                        soundTimer = 0;
-                        OnBeepStatus(false);
-                    }
-                    else
-                    {
-                        soundTimer = (byte)(soundTimer - 1);
-                        OnBeepStatus(true);
-                    }
+                        if (soundTimer < 1)
+                        {
+                            soundTimer = 0;
+                            OnBeepStatus(false);
+                        }
+                        else
+                        {
+                            soundTimer = (byte)(soundTimer - 1);
+                            OnBeepStatus(true);
+                        }
 
-                    if (delayTimer > 0)
-                    {
-                        delayTimer = (byte)(delayTimer - 1);
+                        if (delayTimer > 0)
+                        {
+                            delayTimer = (byte)(delayTimer - 1);
+                        }
                     }
+                    finally
+                    {
+                        Tick?.Invoke(this, EventArgs.Empty);
+                    }
+                    instructionsToExecuteInFrame = instructionsPerFrame;
                 }
-                finally
-                {
-                    Tick?.Invoke(this, EventArgs.Empty);
-                }
-                instructionsToExecuteInFrame = instructionsPerFrame;
             }
         }
 
@@ -925,36 +946,52 @@ namespace yac8i
             return (ushort)(memory[instructionAddress] << 8 | memory[instructionAddress + 1]);
         }
 
-        private void ExecuteInstruction()
+        private bool ExecuteInstruction()
         {
+            bool executed = false;
             try
             {
                 if (ProgramCounter < memory.Length)
                 {
-                    if (Breakpoints.TryGetValue(ProgramCounter, out var breakpointInfo))
+                    if (breakpoints.TryGetValue(ProgramCounter, out var breakpointInfo))
                     {
-                        breakpointInfo.OnHit();
-                        Pause();
-                    }
-                    
-                    byte[] instructionRaw = [memory[ProgramCounter], memory[ProgramCounter + 1]];
-
-                    ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
-
-                    var instruction = instructions.Find(item => (instructionValue & item.Mask) == item.Opcode);
-                    if (instruction != null && !(ct.HasValue && ct.Value.IsCancellationRequested))
-                    {
-                        ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
-                        ushort args = (ushort)(instructionValue & argsMask);
-
-                        if (instruction.Execute != null && instruction.Execute(args))
+                        if (!breakpointInfo.IsActive)
                         {
-                            ProgramCounter += 2;
+                            Pause();
+                            breakpointInfo.IsActive = true;
+                            breakpointInfo.OnHit();
                         }
+                        else
+                        {
+                            breakpointInfo.IsActive = false;
+                        }
+                        
                     }
-                    else
+                    if (!breakpointInfo?.IsActive ?? true)
                     {
-                        tickTimer.Stop();
+                        byte[] instructionRaw = [memory[ProgramCounter], memory[ProgramCounter + 1]];
+
+                        ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
+
+                        var instruction = instructions.Find(item => (instructionValue & item.Mask) == item.Opcode);
+                        if (instruction != null && !(ct.HasValue && ct.Value.IsCancellationRequested))
+                        {
+                            ushort argsMask = (ushort)(instruction.Mask ^ 0xFFFF);
+                            ushort args = (ushort)(instructionValue & argsMask);
+
+                            if (instruction.Execute != null)
+                            {
+                                if (instruction.Execute(args))
+                                {
+                                    ProgramCounter += 2;
+                                }
+                                executed = true;
+                            }
+                        }
+                        else
+                        {
+                            tickTimer.Stop();
+                        }
                     }
                 }
                 else
@@ -966,40 +1003,45 @@ namespace yac8i
             {
                 OnNewMessage(ex.Message);
             }
+            return executed;
         }
 
         private void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
         {
             int delayedInstructions = (int)Math.Floor(instructionsPerFrame * (args.Delay / tickTimer.Interval));
 
-            for (instructionsToExecuteInFrame = instructionsPerFrame + delayedInstructions;
-                 0 < instructionsToExecuteInFrame;
-                 instructionsToExecuteInFrame--)
+            for (instructionsToExecuteInFrame = instructionsPerFrame + delayedInstructions; 0 < instructionsToExecuteInFrame; instructionsToExecuteInFrame--)
             {
-                ExecuteInstruction();
-            }
-
-            try
-            {
-                if (soundTimer < 1)
+                if (!ExecuteInstruction())
                 {
-                    soundTimer = 0;
-                    OnBeepStatus(false);
-                }
-                else
-                {
-                    soundTimer = (byte)(soundTimer - 1);
-                    OnBeepStatus(true);
-                }
-
-                if (delayTimer > 0)
-                {
-                    delayTimer = (byte)(delayTimer - 1);
+                    break;
                 }
             }
-            finally
+
+            if (instructionsToExecuteInFrame == 0)
             {
-                Tick?.Invoke(this, EventArgs.Empty);
+                try
+                {
+                    if (soundTimer < 1)
+                    {
+                        soundTimer = 0;
+                        OnBeepStatus(false);
+                    }
+                    else
+                    {
+                        soundTimer = (byte)(soundTimer - 1);
+                        OnBeepStatus(true);
+                    }
+
+                    if (delayTimer > 0)
+                    {
+                        delayTimer = (byte)(delayTimer - 1);
+                    }
+                }
+                finally
+                {
+                    Tick?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 
