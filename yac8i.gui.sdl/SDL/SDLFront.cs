@@ -1,4 +1,3 @@
-//based on https://jsayers.dev/category/c-sdl-tutorial-series/
 using System;
 using SDL2;
 
@@ -15,7 +14,7 @@ namespace yac8i.gui.sdl
             this.vm = vm;
         }
 
-        public void InitializeAndStart()
+        public void InitializeAndStart(IntPtr windowHandle)
         {
             // Initilizes SDL.
             if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_AUDIO) < 0)
@@ -24,14 +23,7 @@ namespace yac8i.gui.sdl
             }
 
             sdlSound = new SDLSound(vm);
-
-            // Create a new window given a title, size, and passes it a flag indicating it should be shown.
-            IntPtr windowPtr = SDL.SDL_CreateWindow("Yet another Chip8 Interpreter",
-                                                SDL.SDL_WINDOWPOS_UNDEFINED,
-                                                SDL.SDL_WINDOWPOS_UNDEFINED,
-                                                PixelConfig.PixelWidth * PixelConfig.PixelSize, PixelConfig.PixelHeight * PixelConfig.PixelSize,
-                                                SDL.SDL_WindowFlags.SDL_WINDOW_SHOWN);
-
+            IntPtr windowPtr = SDL.SDL_CreateWindowFrom(windowHandle);
             if (windowPtr == IntPtr.Zero)
             {
                 throw new Exception($"There was an issue creating the window. {SDL.SDL_GetError()}");
@@ -85,6 +77,22 @@ namespace yac8i.gui.sdl
         {
             vm.Tick -= OnTick;
             sdlDraw?.Stop();
+        }
+
+        public void OnKeyDown(SDL.SDL_Keycode key)
+        {
+            SDL.SDL_Event _event = new SDL.SDL_Event();
+            _event.type = SDL.SDL_EventType.SDL_KEYDOWN;
+            _event.key.keysym.sym = key;
+            SDL.SDL_PushEvent(ref _event);
+        }
+
+        public void OnKeyUp(SDL.SDL_Keycode key)
+        {
+            SDL.SDL_Event _event = new SDL.SDL_Event();
+            _event.key.keysym.sym = key;
+            _event.type = SDL.SDL_EventType.SDL_KEYUP;
+            SDL.SDL_PushEvent(ref _event);
         }
 
         private void OnTick(object? sender, EventArgs ags)

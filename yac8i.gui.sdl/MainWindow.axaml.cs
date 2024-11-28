@@ -1,12 +1,22 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using yac8i.gui.sdl.MVVM;
 
 namespace yac8i.gui.sdl
 {
     public partial class MainWindow : Window
     {
+        public IntPtr HostPointer
+        {
+            get
+            {
+                return Dispatcher.UIThread.Invoke(() =>this.FindControl<NativeEmbeddingControl>("host")?.Handle ?? IntPtr.Zero);
+                
+            }
+        }
         public MainWindow()
         {
             InitializeComponent();
@@ -36,6 +46,18 @@ namespace yac8i.gui.sdl
         {
             ViewModel?.Dispose();
             base.OnClosing(e);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            ViewModel?.OnKeyDown(e);
+        }
+
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            base.OnKeyUp(e);
+            ViewModel?.OnKeyUp(e);
         }
     }
 }

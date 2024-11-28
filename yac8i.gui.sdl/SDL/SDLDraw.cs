@@ -7,6 +7,7 @@ namespace yac8i.gui.sdl
 {
     public class SDLDraw
     {
+        public static IReadOnlyCollection<SDL.SDL_Keycode> SupportedKeys => keysMapping.Keys;
         private readonly AutoResetEvent DoFrameAutoResetEvent = new(false);
         private readonly int pitch;
         private readonly IntPtr windowTexturePtr;
@@ -98,8 +99,17 @@ namespace yac8i.gui.sdl
                 {
                     fixed (byte* surfacePtr = surface)
                     {
-                        SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch);
-                        SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero);
+                        if (SDL.SDL_UpdateTexture(windowTexturePtr, IntPtr.Zero, (IntPtr)surfacePtr, pitch) < 0)
+                        {
+                            Console.WriteLine(SDL.SDL_GetError());
+                        }
+
+                        if (SDL.SDL_RenderCopy(rendererPtr, windowTexturePtr, IntPtr.Zero, IntPtr.Zero) < 0)
+                        {
+                            Console.WriteLine(SDL.SDL_GetError());
+                        }
+
+
                         SDL.SDL_RenderPresent(rendererPtr);
                     }
                 }

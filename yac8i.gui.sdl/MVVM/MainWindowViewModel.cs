@@ -9,6 +9,9 @@ using CommunityToolkit.Mvvm.Input;
 using Avalonia.Platform.Storage;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Input;
+using SDL2;
+using System.Linq;
 
 namespace yac8i.gui.sdl.MVVM
 {
@@ -50,7 +53,13 @@ namespace yac8i.gui.sdl.MVVM
             sdlFront = new SDLFront(vm);
 
             //TODO: long running
-            Task.Run(() => sdlFront.InitializeAndStart());
+            Task.Run(async () =>
+            {
+                //this delay is here to get a correct HostPointer for the MainWindow
+                //TODO: find a better solution than this!
+                await Task.Delay(500);
+                sdlFront.InitializeAndStart((mainWindow as MainWindow)?.HostPointer ?? IntPtr.Zero);
+            });
 
             UpdateInstructions();
             this.mainWindow = mainWindow;
@@ -79,7 +88,7 @@ namespace yac8i.gui.sdl.MVVM
             vmTask?.Dispose();
             sdlFront.Stop();
         }
-        
+
         public void RemoveBreakpoint(BreakpointViewModel breakpointViewModel)
         {
             Breakpoints.Remove(breakpointViewModel);
@@ -88,14 +97,48 @@ namespace yac8i.gui.sdl.MVVM
                 removed.BreakpointHit -= OnBreakpointHit;
             }
         }
-        
+
         public void AddNewBreakpoint(ushort address)
         {
             if (vm.TryAddBreakpoint(address, out var breakpointInfo))
             {
                 breakpointInfo.BreakpointHit += OnBreakpointHit;
-                Breakpoints.Add(new BreakpointViewModel(breakpointInfo,address));
+                Breakpoints.Add(new BreakpointViewModel(breakpointInfo, address));
             }
+        }
+
+        public void OnKeyDown(KeyEventArgs e)
+        {
+            var key = e.Key switch
+            {
+                Key.D1 => SDL.SDL_Keycode.SDLK_1,
+                Key.D2 => SDL.SDL_Keycode.SDLK_2,
+                Key.D3 => SDL.SDL_Keycode.SDLK_3,
+                Key.D4 => SDL.SDL_Keycode.SDLK_4,
+                _ => (SDL.SDL_Keycode)(e.Key + 53),
+            };
+            if (SDLDraw.SupportedKeys.Contains(key))
+            {
+                sdlFront.OnKeyDown(key);
+            }
+
+        }
+
+        public void OnKeyUp(KeyEventArgs e)
+        {
+            var key = e.Key switch
+            {
+                Key.D1 => SDL.SDL_Keycode.SDLK_1,
+                Key.D2 => SDL.SDL_Keycode.SDLK_2,
+                Key.D3 => SDL.SDL_Keycode.SDLK_3,
+                Key.D4 => SDL.SDL_Keycode.SDLK_4,
+                _ => (SDL.SDL_Keycode)(e.Key + 53),
+            };
+            if (SDLDraw.SupportedKeys.Contains(key))
+            {
+                sdlFront.OnKeyUp(key);
+            }
+
         }
 
         private void Load(string file)
