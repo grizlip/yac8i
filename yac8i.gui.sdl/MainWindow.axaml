@@ -6,6 +6,9 @@
     mc:Ignorable="d" 
     x:Class="yac8i.gui.sdl.MainWindow" 
     Title="YAC8I"
+    MinWidth="1600"
+    MinHeight="600"
+    CanResize="False" 
     xmlns:local="clr-namespace:yac8i.gui.sdl.MVVM;assembly=yac8i.gui.sdl">
     <Window.Resources>
         <local:OpcodeToHexConverter x:Key="hexConverter"/>
@@ -18,12 +21,13 @@
             <RowDefinition />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="150" />
-            <ColumnDefinition Width="250" />
             <ColumnDefinition />
+            <ColumnDefinition  Width="150" />
+            <ColumnDefinition  Width="100"/>
+            <ColumnDefinition  Width="300"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="2" Padding="15">
+        <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="15">
             <StackPanel>
                 <Button Content="Load" Command="{Binding LoadCommand}"/>
                 <Button Content="Start/Pause" Command="{Binding StartPauseCommand}"/>
@@ -31,7 +35,7 @@
                 <Button Content="Restart" Command="{Binding RestartCommand}"/>
             </StackPanel>
         </Border>
-        <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" Padding="5">
+        <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="5">
             <DockPanel>
                 <Label Content="Breakpoints" DockPanel.Dock="Top"/>
                 <ListBox DockPanel.Dock="Top"
@@ -55,7 +59,7 @@
 
             </DockPanel>
         </Border>
-        <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2">
+        <StackPanel Grid.Row="0" Grid.Column="2">
             <Label Content="Registers:"/>
             <ItemsControl ItemsSource="{Binding Registers}">
                 <ItemsControl.ItemsPanel>
@@ -79,9 +83,9 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </StackPanel>
-        <StackPanel Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" >
+        <StackPanel Grid.Row="0" Grid.Column="3">
             <Label Content="Hex:" />
-                <ListBox Height="400"
+                <ListBox Height="550"
                          ItemsSource="{Binding Instructions}" 
                          AutoScrollToSelectedItem="True"
                          SelectedIndex="{Binding SelectedIndex}">
@@ -106,6 +110,6 @@
                      </ListBox.ItemTemplate>
                 </ListBox>
         </StackPanel>
-        <nec:NativeEmbeddingControl Grid.Row="1" Grid.Column="2" Width="1024" Height="512" Name="host"  />  
+        <nec:NativeEmbeddingControl Grid.Row="1" Grid.Column="0" Width="1024" Height="512" Name="host"  />  
     </Grid>
 </Window>
