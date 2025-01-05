@@ -239,6 +239,7 @@ namespace yac8i.gui.sdl.MVVM
         {
             Load(lastRomFile);
             Start();
+            (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
         }
 
         private void Start()
