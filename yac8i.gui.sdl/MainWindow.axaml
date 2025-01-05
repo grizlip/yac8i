@@ -111,6 +111,6 @@
                      </ListBox.ItemTemplate>
                 </ListBox>
         </StackPanel>
-        <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="1024" Height="512" Name="host"  />  
+        <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="1024" Height="512" Name="host" Margin="0 70 0 0" />  
     </Grid>
 </Window>
