@@ -21,6 +21,8 @@ namespace yac8i.gui.sdl.MVVM
         public ICommand StartPauseCommand { get; }
         public ICommand RestartCommand { get; }
         public ICommand StepCommand { get; }
+        public ICommand StoreCommand { get; }
+        public ICommand RestoreCommand { get; }
 
         public ObservableCollection<RegisterViewModel> Registers { get; } = [];
 
@@ -72,6 +74,8 @@ namespace yac8i.gui.sdl.MVVM
             {
                 Registers.Add(new RegisterViewModel() { RegisterId = $"0x{i:X}", RegisterValue = "-" });
             }
+            StoreCommand = new RelayCommand(StoreCommandExecute, StoreCanExecute);
+            RestoreCommand = new RelayCommand(RestoreCommandExecute);
             Registers.Add(new RegisterViewModel() { RegisterId = "I", RegisterValue = "-" });
             Registers.Add(new RegisterViewModel() { RegisterId = "PC", RegisterValue = "-" });
         }
@@ -179,6 +183,12 @@ namespace yac8i.gui.sdl.MVVM
             }
         }
 
+
+        private bool StoreCanExecute()
+        {
+            return started;
+        }
+
         private bool StartPauseCommandCanExecute()
         {
             return loaded;
@@ -187,6 +197,16 @@ namespace yac8i.gui.sdl.MVVM
         private bool RestartCommandCanExecute()
         {
             return started;
+        }
+
+        private void StoreCommandExecute()
+        {
+            vm.TryStore("state.xml");
+        }
+
+        private void RestoreCommandExecute()
+        {
+            vm.TryRestore("state.xml");
         }
 
         private void StartPauseCommandExecute()
@@ -254,6 +274,7 @@ namespace yac8i.gui.sdl.MVVM
             started = true;
             (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
             (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            (StoreCommand as IRelayCommand)?.NotifyCanExecuteChanged();
             vm.Tick += OnTick;
             running = true;
         }

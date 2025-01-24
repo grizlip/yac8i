@@ -13,13 +13,7 @@ namespace yac8i
     {
         public event EventHandler<int> ProgramLoaded;
 
-        public bool[,] Surface
-        {
-            get
-            {
-                return this.surface;
-            }
-        }
+        public bool[,] Surface => surface;
 
         public EventHandler<string> NewMessage;
 
@@ -60,11 +54,11 @@ namespace yac8i
 
         private readonly HighResolutionTimer tickTimer = new(1000f / 60f); //60 times per second
 
-        private readonly byte[] memory = new byte[4096];
+        private byte[] memory = new byte[4096];
 
-        private readonly byte[] registers = new byte[16];
+        private byte[] registers = new byte[16];
 
-        private readonly Stack<ushort> stack = new();
+        private Stack<ushort> stack = new();
 
         private int instructionsToExecuteInFrame = 0;
 
@@ -82,11 +76,11 @@ namespace yac8i
 
         private bool loaded = false;
 
-        private readonly bool[,] surface = new bool[64, 32];
+        private bool[,] surface = new bool[64, 32];
 
         private CancellationToken? ct;
 
-        private readonly int instructionsPerFrame = 7;
+        private int instructionsPerFrame = 7;
 
         private int programBytesCount = 0;
 
@@ -764,10 +758,9 @@ namespace yac8i
             StopAndReset();
         }
 
-
         public bool TryAddBreakpoint(ushort address, out BreakpointInfo breakpointInfo)
         {
-            bool result = address >= 512 && (address -512) < programBytesCount && address % 2 == 0;
+            bool result = address >= 512 && (address - 512) < programBytesCount && address % 2 == 0;
             breakpointInfo = null;
             if (result)
             {
@@ -780,6 +773,67 @@ namespace yac8i
         public bool TryRemoveBreakpoint(ushort address, out BreakpointInfo breakpointInfo)
         {
             return breakpoints.TryRemove(address, out breakpointInfo);
+        }
+
+        public bool TryRestore(string fileName)
+        {
+            bool result = false;
+            bool startTimer = tickTimer.IsRunning;
+            tickTimer.Stop();
+
+            if (VmSerializableState.TryRestore(fileName, out var restoredState))
+            {
+                if (restoredState != null)
+                {
+                    result = true;
+                    beepStatus = restoredState.BeepStatus;
+                    delayTimer = restoredState.DelayTimer;
+                    instructionsPerFrame = restoredState.InstructionsPerFrame;
+                    instructionsToExecuteInFrame = restoredState.InstructionsToExecuteInFrame;
+                    IRegister = restoredState.IRegister;
+                    memory = (byte[])restoredState.Memory.Clone();
+                    programBytesCount = restoredState.ProgramBytesCount;
+                    ProgramCounter = restoredState.ProgramCounter;
+                    registers = (byte[])restoredState.Registers.Clone();
+                    stack = new Stack<ushort>(restoredState.Stack.Reverse());
+                    soundTimer = restoredState.SoundTimer;
+                    surface = (bool[,])restoredState.Surface.Clone();
+                }
+            }
+
+            if (startTimer)
+            {
+                tickTimer.Start();
+            }
+            return result;
+        }
+
+        public bool TryStore(string fileName)
+        {
+            bool startTimer = tickTimer.IsRunning;
+            tickTimer.Stop();
+
+            VmSerializableState state = new()
+            {
+                BeepStatus = beepStatus,
+                DelayTimer = delayTimer,
+                InstructionsPerFrame = instructionsPerFrame,
+                InstructionsToExecuteInFrame = instructionsToExecuteInFrame,
+                IRegister = IRegister,
+                Memory = (byte[])memory.Clone(),
+                ProgramBytesCount = programBytesCount,
+                ProgramCounter = ProgramCounter,
+                Registers = (byte[])registers.Clone(),
+                Stack = new Stack<ushort>(stack.Reverse()),
+                SoundTimer = soundTimer,
+                Surface = (bool[,])surface.Clone(),
+            };
+            prev = (bool[,])surface.Clone();
+            if (startTimer)
+            {
+                tickTimer.Start();
+            }
+            return VmSerializableState.TryStore(fileName, state);
         }
 
         public bool Load(string programSourceFilePath)
@@ -965,7 +1019,7 @@ namespace yac8i
                         {
                             breakpointInfo.IsActive = false;
                         }
-                        
+
                     }
                     if (!breakpointInfo?.IsActive ?? true)
                     {

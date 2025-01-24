@@ -35,6 +35,8 @@
                 <Button Content="Start/Pause" Command="{Binding StartPauseCommand}"/>
                 <Button Content="Step" Command="{Binding StepCommand}"/>
                 <Button Content="Restart" Command="{Binding RestartCommand}"/>
+                <Button Content="Store" Command="{Binding StoreCommand}"/>
+                <Button Content="Restore" Command="{Binding RestoreCommand}"/>
             </StackPanel>
         </Border>
         <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="5">
