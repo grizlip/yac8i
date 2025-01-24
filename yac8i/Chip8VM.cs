@@ -828,7 +828,7 @@ namespace yac8i
                 SoundTimer = soundTimer,
                 Surface = (bool[,])surface.Clone(),
             };
-            prev = (bool[,])surface.Clone();
+            
             if (startTimer)
             {
                 tickTimer.Start();
