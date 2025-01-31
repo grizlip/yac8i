@@ -19,6 +19,8 @@ namespace yac8i
         public bool BeepStatus = false;
         public byte DelayTimer = 0;
         [XmlElement(DataType = "hexBinary")]
+        public byte[] LoadedProgram = new byte[4096];
+        [XmlElement(DataType = "hexBinary")]
         public byte[] Memory = new byte[4096];
         [XmlElement(DataType = "hexBinary")]
         public byte[] Registers = new byte[16];
@@ -78,40 +80,19 @@ namespace yac8i
         public Stack<ushort> Stack = new();
 
 
-        public static bool TryStore(string fileName, VmSerializableState state)
+        public static void Store(string fileName, VmSerializableState state)
         {
-            bool result = true;
-            try
-            {
-                XmlSerializer serializer = new(typeof(VmSerializableState));
-                XmlWriterSettings settings = new() { Indent = true };
-                using var writer = XmlWriter.Create(fileName, settings);
-                serializer.Serialize(writer, state);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error while storing state: {ex}");
-                result = false;
-            }
-            return result;
+            XmlSerializer serializer = new(typeof(VmSerializableState));
+            XmlWriterSettings settings = new() { Indent = true };
+            using var writer = XmlWriter.Create(fileName, settings);
+            serializer.Serialize(writer, state);
         }
 
-        public static bool TryRestore(string fileName, out VmSerializableState state)
+        public static void Restore(string fileName, out VmSerializableState state)
         {
-            state = null;
-            bool result = true;
-            try
-            {
-                XmlSerializer serializer = new(typeof(VmSerializableState));
-                using var reader = XmlReader.Create(fileName);
-                state = (VmSerializableState)serializer.Deserialize(reader);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error while restoring state: {ex}");
-                result = false;
-            }
-            return result;
+            XmlSerializer serializer = new(typeof(VmSerializableState));
+            using var reader = XmlReader.Create(fileName);
+            state = (VmSerializableState)serializer.Deserialize(reader);
         }
     }
 }

@@ -56,6 +56,8 @@ namespace yac8i
 
         private byte[] memory = new byte[4096];
 
+        private byte[] loadedProgram = null;
+
         private byte[] registers = new byte[16];
 
         private Stack<ushort> stack = new();
@@ -780,25 +782,36 @@ namespace yac8i
             bool result = false;
             bool startTimer = tickTimer.IsRunning;
             tickTimer.Stop();
-
-            if (VmSerializableState.TryRestore(fileName, out var restoredState))
+            try
             {
+                VmSerializableState.Restore(fileName, out var restoredState);
                 if (restoredState != null)
                 {
-                    result = true;
-                    beepStatus = restoredState.BeepStatus;
-                    delayTimer = restoredState.DelayTimer;
-                    instructionsPerFrame = restoredState.InstructionsPerFrame;
-                    instructionsToExecuteInFrame = restoredState.InstructionsToExecuteInFrame;
-                    IRegister = restoredState.IRegister;
-                    memory = (byte[])restoredState.Memory.Clone();
-                    programBytesCount = restoredState.ProgramBytesCount;
-                    ProgramCounter = restoredState.ProgramCounter;
-                    registers = (byte[])restoredState.Registers.Clone();
-                    stack = new Stack<ushort>(restoredState.Stack.Reverse());
-                    soundTimer = restoredState.SoundTimer;
-                    surface = (bool[,])restoredState.Surface.Clone();
+                    result = loadedProgram != null && restoredState.LoadedProgram.SequenceEqual(loadedProgram);
+                    if (result)
+                    {
+                        beepStatus = restoredState.BeepStatus;
+                        delayTimer = restoredState.DelayTimer;
+                        instructionsPerFrame = restoredState.InstructionsPerFrame;
+                        instructionsToExecuteInFrame = restoredState.InstructionsToExecuteInFrame;
+                        IRegister = restoredState.IRegister;
+                        memory = (byte[])restoredState.Memory.Clone();
+                        programBytesCount = restoredState.ProgramBytesCount;
+                        ProgramCounter = restoredState.ProgramCounter;
+                        registers = (byte[])restoredState.Registers.Clone();
+                        stack = new Stack<ushort>(restoredState.Stack.Reverse());
+                        soundTimer = restoredState.SoundTimer;
+                        surface = (bool[,])restoredState.Surface.Clone();
+                    }
+                    else
+                    {
+                        OnNewMessage("Tried loading state from different program.");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                OnNewMessage($"Error while storing state: {ex}");
             }
 
             if (startTimer)
@@ -821,6 +834,7 @@ namespace yac8i
                 InstructionsToExecuteInFrame = instructionsToExecuteInFrame,
                 IRegister = IRegister,
                 Memory = (byte[])memory.Clone(),
+                LoadedProgram = (byte[])loadedProgram.Clone(),
                 ProgramBytesCount = programBytesCount,
                 ProgramCounter = ProgramCounter,
                 Registers = (byte[])registers.Clone(),
@@ -828,22 +842,35 @@ namespace yac8i
                 SoundTimer = soundTimer,
                 Surface = (bool[,])surface.Clone(),
             };
-            
+
             if (startTimer)
             {
                 tickTimer.Start();
             }
-            return VmSerializableState.TryStore(fileName, state);
+
+            var result = true;
+
+            try
+            {
+                VmSerializableState.Store(fileName, state);
+            }
+            catch (Exception ex)
+            {
+                OnNewMessage($"Error while storing state {ex}");
+                result = false;
+            }
+
+            return result;
         }
 
         public bool Load(string programSourceFilePath)
         {
             try
             {
-
                 using (FileStream programSourceStreamReader = new(programSourceFilePath, FileMode.Open))
                 {
                     programBytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
+                    loadedProgram = (byte[])memory.Clone();
                 }
                 loaded = true;
                 ProgramLoaded?.Invoke(this, programBytesCount);

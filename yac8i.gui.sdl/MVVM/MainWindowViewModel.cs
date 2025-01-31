@@ -206,7 +206,13 @@ namespace yac8i.gui.sdl.MVVM
 
         private void RestoreCommandExecute()
         {
-            vm.TryRestore("state.xml");
+            if(vm.TryRestore("state.xml"))
+            {
+                loaded = true;
+                (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+            }
         }
 
         private void StartPauseCommandExecute()
