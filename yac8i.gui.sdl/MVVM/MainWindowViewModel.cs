@@ -199,19 +199,56 @@ namespace yac8i.gui.sdl.MVVM
             return started;
         }
 
-        private void StoreCommandExecute()
+        private async void StoreCommandExecute()
         {
-            vm.TryStore("state.xml");
+            var toplevel = TopLevel.GetTopLevel(mainWindow);
+            if (toplevel != null)
+            {
+                var file = await toplevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                {
+                    Title = "Save State File"
+                });
+
+                if (file is not null)
+                {
+                    vm.TryStore(file.Path.AbsolutePath);
+                }
+            }
         }
 
-        private void RestoreCommandExecute()
+        private async void RestoreCommandExecute()
         {
-            if(vm.TryRestore("state.xml"))
+            var toplevel = TopLevel.GetTopLevel(mainWindow);
+            if (toplevel != null)
             {
-                loaded = true;
-                (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
-                (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                var stateFilePicker = new FilePickerOpenOptions
+                {
+                    Title = "Open state file",
+                    AllowMultiple = false,
+                    FileTypeFilter = [
+
+                    new("State files")
+                        {
+                            Patterns = ["*.xml"]
+                        },
+                    new("All files")
+                        {
+                            Patterns = ["*"]
+                        }
+                    ]
+                };
+                var files = await toplevel.StorageProvider.OpenFilePickerAsync(stateFilePicker);
+
+                if (files.Count >= 1 && files[0].TryGetLocalPath() is string filePath)
+                {
+                    if (vm.TryRestore(filePath))
+                    {
+                        loaded = true;
+                        (StartPauseCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                        (RestartCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                        (StepCommand as IRelayCommand)?.NotifyCanExecuteChanged();
+                    }
+                }
             }
         }
 
@@ -294,21 +331,21 @@ namespace yac8i.gui.sdl.MVVM
                 {
                     Title = "Open ROM File",
                     AllowMultiple = false,
-                    FileTypeFilter = new List<FilePickerFileType>() {
+                    FileTypeFilter = [
 
                     new("Rom files")
                         {
-                            Patterns = new List<string>() {"*.rom"}
+                            Patterns = ["*.rom"]
                         },
                     new("ch8 files")
                         {
-                            Patterns = new List<string>() {"*.ch8"}
+                            Patterns = ["*.ch8"]
                         },
                     new("All files")
                         {
-                            Patterns = new List<string>() {"*"}
+                            Patterns = ["*"]
                         }
-                    }
+                    ]
                 };
                 var files = await toplevel.StorageProvider.OpenFilePickerAsync(romFilePiker);
 
