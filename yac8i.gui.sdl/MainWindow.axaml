@@ -21,6 +21,7 @@
             <RowDefinition />
             <RowDefinition />
             <RowDefinition />
+            <RowDefinition />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
@@ -61,6 +62,12 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
             </DockPanel>
+        </Border>
+        <Border Grid.Row ="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="5">
+            <StackPanel>
+                <Label Content="Audio devices" DockPanel.Dock="Top"/>
+                <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding SelectedAudioDevice}"/>
+            </StackPanel>
         </Border>
         <StackPanel Grid.Row="0" Grid.Column="2">
             <Label Content="Registers:"/>
@@ -113,6 +120,6 @@
                      </ListBox.ItemTemplate>
                 </ListBox>
         </StackPanel>
-        <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="1024" Height="512" Name="host" Margin="0 70 0 0" />  
+        <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Width="1024" Height="512" Name="host" Margin="0 70 0 0" />  
     </Grid>
 </Window>

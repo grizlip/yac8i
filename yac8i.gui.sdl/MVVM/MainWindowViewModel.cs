@@ -30,12 +30,21 @@ namespace yac8i.gui.sdl.MVVM
 
         public ObservableCollection<BreakpointViewModel> Breakpoints { get; } = [];
 
+        public ObservableCollection<string> AudioDevices { get; } = [];
+
+        public string SelectedAudioDevice
+        {
+            get => selectedAudioDevice;
+            set => SetProperty(ref selectedAudioDevice, value);
+        }
+
         public int SelectedIndex
         {
             get => selectedIndex;
             set => SetProperty(ref selectedIndex, value);
         }
 
+        private string selectedAudioDevice = string.Empty;
         private readonly Chip8VM vm;
         private readonly Window mainWindow;
         private bool started;
@@ -53,7 +62,18 @@ namespace yac8i.gui.sdl.MVVM
         {
             this.vm = vm;
             sdlFront = new SDLFront(vm);
-
+            sdlFront.NewSoundDevices += (s, a) =>
+            {
+                AudioDevices.Clear();
+                foreach (var audioDevice in a)
+                {
+                    AudioDevices.Add(audioDevice);
+                }
+                if (AudioDevices.Count > 0)
+                {
+                    SelectedAudioDevice = AudioDevices[0];
+                }
+            };
             //TODO: long running
             Task.Run(async () =>
             {

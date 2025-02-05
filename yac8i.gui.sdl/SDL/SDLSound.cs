@@ -7,13 +7,16 @@ namespace yac8i.gui.sdl
 {
     public class SDLSound : IDisposable
     {
+        public IReadOnlyCollection<string> SoundDevicesNames => soundDevicesNames;
+
         private readonly Chip8VM vm;
         private double samplingIndex = 0;
         private const double AMPLITUDE = 28000d;
         private const double SOUND_FREQUENCY = 261.63d;
         private SDL.SDL_AudioSpec have;
         private readonly uint soundDeviceId;
-        
+        private readonly List<string> soundDevicesNames = [];
+
         public SDLSound(Chip8VM vm)
         {
             this.vm = vm;
@@ -27,7 +30,6 @@ namespace yac8i.gui.sdl
             };
 
             int audioDevicesCount = SDL.SDL_GetNumAudioDevices(0);
-            List<string> soundDevicesNames = [];
             for (int i = 0; i < audioDevicesCount; i++)
             {
                 soundDevicesNames.Add(SDL.SDL_GetAudioDeviceName(i, 0));

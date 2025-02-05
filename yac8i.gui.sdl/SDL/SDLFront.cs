@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using SDL2;
 
 namespace yac8i.gui.sdl
 {
     public class SDLFront
     {
+        public event EventHandler<IEnumerable<string>>? NewSoundDevices;
+
         private readonly Chip8VM vm;
         private SDLSound? sdlSound;
         private SDLDraw? sdlDraw;
@@ -23,6 +26,8 @@ namespace yac8i.gui.sdl
             }
 
             sdlSound = new SDLSound(vm);
+            NewSoundDevices?.Invoke(this, sdlSound.SoundDevicesNames);
+
             IntPtr windowPtr = SDL.SDL_CreateWindowFrom(windowHandle);
             if (windowPtr == IntPtr.Zero)
             {
@@ -81,18 +86,20 @@ namespace yac8i.gui.sdl
 
         public void OnKeyDown(SDL.SDL_Keycode key)
         {
-            SDL.SDL_Event _event = new SDL.SDL_Event();
-            _event.type = SDL.SDL_EventType.SDL_KEYDOWN;
+            SDL.SDL_Event _event = new()
+            {
+                type = SDL.SDL_EventType.SDL_KEYDOWN
+            };
             _event.key.keysym.sym = key;
-            SDL.SDL_PushEvent(ref _event);
+            _ = SDL.SDL_PushEvent(ref _event);
         }
 
         public void OnKeyUp(SDL.SDL_Keycode key)
         {
-            SDL.SDL_Event _event = new SDL.SDL_Event();
+            SDL.SDL_Event _event = new();
             _event.key.keysym.sym = key;
             _event.type = SDL.SDL_EventType.SDL_KEYUP;
-            SDL.SDL_PushEvent(ref _event);
+            _ = SDL.SDL_PushEvent(ref _event);
         }
 
         private void OnTick(object? sender, EventArgs ags)
