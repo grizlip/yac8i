@@ -35,7 +35,13 @@ namespace yac8i.gui.sdl.MVVM
         public string SelectedAudioDevice
         {
             get => selectedAudioDevice;
-            set => SetProperty(ref selectedAudioDevice, value);
+            set
+            {
+                if (SetProperty(ref selectedAudioDevice, value))
+                {
+                    sdlFront.ChangeAudiDevice(selectedAudioDevice);
+                }
+            }
         }
 
         public int SelectedIndex

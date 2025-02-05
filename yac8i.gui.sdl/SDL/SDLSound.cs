@@ -14,20 +14,11 @@ namespace yac8i.gui.sdl
         private const double AMPLITUDE = 28000d;
         private const double SOUND_FREQUENCY = 261.63d;
         private SDL.SDL_AudioSpec have;
-        private readonly uint soundDeviceId;
+        private uint soundDeviceId;
         private readonly List<string> soundDevicesNames = [];
-
         public SDLSound(Chip8VM vm)
         {
             this.vm = vm;
-            SDL.SDL_AudioSpec want = new()
-            {
-                freq = 44100,
-                format = SDL.AUDIO_S16SYS,
-                channels = 1,
-                samples = 512,
-                callback = AudioCallback
-            };
 
             int audioDevicesCount = SDL.SDL_GetNumAudioDevices(0);
             for (int i = 0; i < audioDevicesCount; i++)
@@ -37,26 +28,49 @@ namespace yac8i.gui.sdl
 
             if (soundDevicesNames.Count != 0)
             {
-                //TODO: make it possible to choose sound device
-                soundDeviceId = SDL.SDL_OpenAudioDevice(soundDevicesNames[0], 0, ref want, out have, 0);
-
-                if (soundDeviceId == 0)
-                {
-                    throw new Exception($"Failed to open audio: {SDL.SDL_GetError()}");
-                }
-                else if (want.format != have.format)
-                {
-                    throw new Exception($"Failed to get the desired AudioSpec. Instead got: frequency: {have.freq}, format: {have.format}, channels: {have.channels}, samples: {have.samples}, sizes: {have.size}");
-                }
-                else
-                {
-                    this.vm.BeepStatus += OnBeepStatusChanged;
-                }
+                OpenAudioDevice(soundDevicesNames[0]);
             }
             else
             {
                 throw new Exception("No audio device suitable for playback.");
             }
+        }
+
+        public void ChangeAudiDevice(string audioDeviceName)
+        {   
+            if(soundDeviceId !=0)
+            {
+                SDL.SDL_CloseAudioDevice(soundDeviceId);
+                vm.BeepStatus -= OnBeepStatusChanged;     
+            }
+            OpenAudioDevice(audioDeviceName);
+        }
+
+        private void OpenAudioDevice(string deviceName)
+        {
+            SDL.SDL_AudioSpec want = new()
+            {
+                freq = 44100,
+                format = SDL.AUDIO_S16SYS,
+                channels = 1,
+                samples = 512,
+                callback = AudioCallback
+            };
+            soundDeviceId = SDL.SDL_OpenAudioDevice(deviceName, 0, ref want, out have, 0);
+
+            if (soundDeviceId == 0)
+            {
+                throw new Exception($"Failed to open audio: {SDL.SDL_GetError()}");
+            }
+            else if (want.format != have.format)
+            {
+                throw new Exception($"Failed to get the desired AudioSpec. Instead got: frequency: {have.freq}, format: {have.format}, channels: {have.channels}, samples: {have.samples}, sizes: {have.size}");
+            }
+            else
+            {
+                vm.BeepStatus += OnBeepStatusChanged;
+            }
+
         }
 
         public void Dispose()

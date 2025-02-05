@@ -78,6 +78,11 @@ namespace yac8i.gui.sdl
             SDL.SDL_Quit();
         }
 
+        public void ChangeAudiDevice(string audioDeviceName)
+        {
+            sdlSound?.ChangeAudiDevice(audioDeviceName);
+        }
+
         public void Stop()
         {
             vm.Tick -= OnTick;
