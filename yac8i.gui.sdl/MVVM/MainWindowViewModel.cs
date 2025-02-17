@@ -412,7 +412,7 @@ namespace yac8i.gui.sdl.MVVM
                 Instructions.Clear();
                 foreach (var opcode in opcodes)
                 {
-                    Instructions.Add(new InstructionViewModel(opcode, address, vm.GetMnemonic(opcode))); //TODO: make model to provide mnemonic from VM
+                    Instructions.Add(new InstructionViewModel(opcode, address, vm.GetMnemonic(opcode)));
                     address += 2;
                 }
             });
