@@ -3,4 +3,5 @@ bin
 *.xml
 .vscode
 TestResults
+.vs
 
