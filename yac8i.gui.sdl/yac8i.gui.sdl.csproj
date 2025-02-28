@@ -27,4 +27,10 @@
     <Exec Command="xcopy /y /d  $(ProjectDir)lib\SDL2_image-2.0.5-win32-x64\SDL2_image.dll $(ProjectDir)$(OutDir)" />
     <Exec Command="xcopy /y /d  $(ProjectDir)lib\SDL2_image-2.0.5-win32-x64\zlib1.dll $(ProjectDir)$(OutDir)" />
   </Target>
+  <Target Name="CopyToDeploy" AfterTargets="Build" Condition=" '$(OS)' == 'Windows_NT' ">
+    <Exec Command="xcopy /y /e /k /h /i   $(ProjectDir)$(OutDir)runtimes $(ProjectDir)..\Deploy\runtimes" />
+    <Exec Command="xcopy /y /d  $(ProjectDir)$(OutDir)*.dll $(ProjectDir)..\Deploy" />
+    <Exec Command="xcopy /y /d  $(ProjectDir)$(OutDir)*.exe $(ProjectDir)..\Deploy" />
+    <Exec Command="xcopy /y /d  $(ProjectDir)$(OutDir)*.json $(ProjectDir)..\Deploy" />
+  </Target>
 </Project>
