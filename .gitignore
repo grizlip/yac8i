@@ -4,4 +4,7 @@ bin
 .vscode
 TestResults
 .vs
+*.user
+Deploy
+HeatGeneratedFileList.wxs
 

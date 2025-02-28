@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="yaci8" Language="1033" Version="1.0.0.0" Manufacturer="grizl" UpgradeCode="be1bf7ce-c688-4558-abc2-201bf241c3f0">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate />
+
+		<Feature Id="ProductFeature" Title="WindowsSetup" Level="1">
+			<ComponentGroupRef Id="HeatGenerated" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="INSTALLFOLDER" Name="yac8i" />
+			</Directory>
+		</Directory>
+	</Fragment>
+</Wix>
