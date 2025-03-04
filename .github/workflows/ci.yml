@@ -24,8 +24,8 @@ jobs:
 
       - name: Build
         run: |
-          dotnet clean -c Debug --nologo --verbosity minimal 
-          dotnet build -c Debug -nologo -warnaserror
+          dotnet clean yac8i.gui.sdl/yac8i.gui.sdl.csproj -c Debug --nologo --verbosity minimal 
+          dotnet build yac8i.gui.sdl/yac8i.gui.sdl.csproj -c Debug -nologo -warnaserror
 
   windows:
     name: Windows (.NET 8.0)
@@ -43,5 +43,5 @@ jobs:
       - name: Check Code
         shell: powershell
         run: |
-          dotnet clean -c Debug --nologo --verbosity minimal 
-          dotnet build -c Debug -nologo -warnaserror
+          dotnet clean yac8i.gui.sdl/yac8i.gui.sdl.csproj -c Debug --nologo --verbosity minimal 
+          dotnet build yac8i.gui.sdl/yac8i.gui.sdl.csproj -c Debug -nologo -warnaserror
