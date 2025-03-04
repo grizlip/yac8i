@@ -1,0 +1,47 @@
+name: Continuous Integration
+
+on:
+  push:
+  pull_request:
+    branches: [ master]
+
+permissions:
+  contents: read  #  to fetch code (actions/checkout)
+
+jobs:
+  linux:
+    name: Linux (.NET 8.0)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: |
+          dotnet clean -c Debug --nologo --verbosity minimal 
+          dotnet build -c Debug -nologo -warnaserror
+
+  windows:
+    name: Windows (.NET 8.0)
+    runs-on: windows-2019
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check Code
+        shell: powershell
+        run: |
+          dotnet clean -c Debug --nologo --verbosity minimal 
+          dotnet build -c Debug -nologo -warnaserror
