@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: Install .NET 8.0
         uses: actions/setup-dotnet@v4
@@ -34,6 +36,8 @@ jobs:
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: Install .NET 8.0
         uses: actions/setup-dotnet@v4
