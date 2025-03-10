@@ -29,7 +29,7 @@ namespace yac8i
 
         public ushort ProgramCounter { get; private set; } = 0x200;
 
-
+        internal readonly List<Instruction> instructions;
 
         private readonly byte[] font = [
                                     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -69,8 +69,6 @@ namespace yac8i
         private bool beepStatus = false;
 
         private byte delayTimer = 0;
-
-        private readonly List<Instruction> instructions;
 
         private ushort pressedKeys = 0;
 
