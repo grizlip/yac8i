@@ -105,7 +105,7 @@ namespace yac8i.tests
             Assert.That(result, Is.EqualTo(0x0BCD));
         }
 
-        private bool ExecuteSingleInstruction(Chip8VM vm, ushort opcode, ushort args) => vm.instructions.Single(instruction => instruction.Opcode == opcode).Execute(args);
+        private static bool ExecuteSingleInstruction(Chip8VM vm, ushort opcode, ushort args) => vm.instructions.Single(instruction => instruction.Opcode == opcode).Execute(args);
 
     }
 }
