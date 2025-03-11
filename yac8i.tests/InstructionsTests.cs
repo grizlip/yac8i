@@ -12,8 +12,12 @@ namespace yac8i.tests
         {
             Chip8VM vm = new();
             vm.Surface[0, 0] = true;
-            vm.instructions.Single(instruction => instruction.Opcode == 0x00E0).Execute(0);
-            Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
+            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x00E0).Execute(0);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
+                Assert.That(shouldIncrementPC, Is.True);
+            }
         }
 
         [Test]
@@ -26,6 +30,45 @@ namespace yac8i.tests
                     vm.instructions.Single(instruction => instruction.Opcode == 0x00EE).Execute(100);
                 });
         }
+
+        [Test]
+        public void TestRETCorrect()
+        {
+            Chip8VM vm = new();
+            vm.stack.Push(0xFFFF);
+            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x00EE).Execute(100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(vm.ProgramCounter, Is.EqualTo(0xFFFF));
+                Assert.That(shouldIncrementPC, Is.False);
+            }
+        }
+
+        [Test]
+        public void TestJP()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x1000).Execute(0xFFFF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(vm.ProgramCounter, Is.EqualTo(0x0FFF));
+                Assert.That(shouldIncrementPC, Is.False);
+            }
+        }
+
+        [Test]
+        public void TestCALL()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x2000).Execute(0xFFFF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(vm.ProgramCounter, Is.EqualTo(0x0FFF));
+                Assert.That(vm.stack.Peek(), Is.EqualTo(514));
+                Assert.That(shouldIncrementPC, Is.False);
+            }
+        }
+
 
         [Test]
         public void TestX()
