@@ -12,7 +12,7 @@ namespace yac8i.tests
         {
             Chip8VM vm = new();
             vm.Surface[0, 0] = true;
-            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x00E0).Execute(0);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x00E0,0);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
@@ -27,7 +27,7 @@ namespace yac8i.tests
             Assert.Throws<ArgumentException>(
                 delegate
                 {
-                    vm.instructions.Single(instruction => instruction.Opcode == 0x00EE).Execute(100);
+                     ExecuteSingleInstruction(vm, 0x00EE,100);
                 });
         }
 
@@ -36,7 +36,7 @@ namespace yac8i.tests
         {
             Chip8VM vm = new();
             vm.stack.Push(0xFFFF);
-            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x00EE).Execute(100);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x00EE,100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(vm.ProgramCounter, Is.EqualTo(0xFFFF));
@@ -48,7 +48,7 @@ namespace yac8i.tests
         public void TestJP()
         {
             Chip8VM vm = new();
-            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x1000).Execute(0xFFFF);
+            bool shouldIncrementPC =ExecuteSingleInstruction(vm, 0x1000,0xFFFF);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(vm.ProgramCounter, Is.EqualTo(0x0FFF));
@@ -60,7 +60,7 @@ namespace yac8i.tests
         public void TestCALL()
         {
             Chip8VM vm = new();
-            bool shouldIncrementPC = vm.instructions.Single(instruction => instruction.Opcode == 0x2000).Execute(0xFFFF);
+            bool shouldIncrementPC =ExecuteSingleInstruction(vm, 0x2000,0xFFFF);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(vm.ProgramCounter, Is.EqualTo(0x0FFF));
@@ -104,5 +104,8 @@ namespace yac8i.tests
             ushort result = Instruction.NNN(0xABCD);
             Assert.That(result, Is.EqualTo(0x0BCD));
         }
+
+        private bool ExecuteSingleInstruction(Chip8VM vm, ushort opcode, ushort args) => vm.instructions.Single(instruction => instruction.Opcode == opcode).Execute(args);
+
     }
 }
