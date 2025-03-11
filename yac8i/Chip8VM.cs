@@ -337,7 +337,7 @@ namespace yac8i
                 CheckRegisterIndex(registerYIndex);
                 byte xValue = registers[registerXIndex];
                 byte yValue = registers[registerYIndex];
-                //perform substraction (no need to worry about underflow here)
+                //perform subtraction (no need to worry about underflow here)
                 registers[registerXIndex] = (byte)(xValue - yValue);
                 registers[0xF] = (byte)(xValue>yValue ? 1 : 0);
                 return true;
@@ -473,7 +473,7 @@ namespace yac8i
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte nnArgs = Instruction.NN(args);
-                Random r = new Random(DateTime.Now.Second);
+                Random r = new(DateTime.Now.Second);
                 byte[] random = new byte[1];
                 r.NextBytes(random);
                 registers[registerXIndex] = (byte)(random[0] & nnArgs);
@@ -504,7 +504,7 @@ namespace yac8i
 
                 for(int i = 0; i < sprite.Length;i++)
                 {
-                        BitArray spriteRow = new BitArray(new byte[] {sprite[i]});
+                        BitArray spriteRow = new(new byte[] {sprite[i]});
                         if(y < surface.GetLength(1))
                         {
                             for(int rowBitIndex = spriteRow.Length - 1; rowBitIndex >=0 ; rowBitIndex--)
