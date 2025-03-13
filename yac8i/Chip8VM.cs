@@ -32,6 +32,8 @@ namespace yac8i
         internal readonly List<Instruction> instructions;
 
         internal  Stack<ushort> stack = new();
+        
+        internal byte[] registers = new byte[16];
 
         private readonly byte[] font = [
                                     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -59,8 +61,6 @@ namespace yac8i
         private byte[] memory = new byte[4096];
 
         private byte[] loadedProgram = null;
-
-        private byte[] registers = new byte[16];
 
         private int instructionsToExecuteInFrame = 0;
 

@@ -69,6 +69,26 @@ namespace yac8i.tests
             }
         }
 
+        [Test]
+        public void TestSENoJump()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x3000, 0xFFFF);
+            Assert.That(shouldIncrementPC, Is.True);
+        }
+
+        [Test]
+        public void TestSEJump()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0xFF;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x3000, 0xFFFF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(516));
+            }
+        }
 
         [Test]
         public void TestX()
