@@ -91,6 +91,64 @@ namespace yac8i.tests
         }
 
         [Test]
+        public void TestSNENoJump()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x4000, 0xFFFF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(516));
+            }
+
+        }
+
+        [Test]
+        public void TestSNEJump()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0xFF;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x4000, 0xFFFF);
+            Assert.That(shouldIncrementPC, Is.True);
+        }
+
+
+        [Test]
+        public void TestSERegisterNoJump()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 1;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x5000, 0xFFAF);
+            Assert.That(shouldIncrementPC, Is.True);
+        }
+
+        [Test]
+        public void TestSERegisterJump()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0xFF;
+            vm.registers[0xA] = 0xFF;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x5000, 0xFFAF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(516));
+            }
+        }
+
+        [Test]
+        public void TestLD()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x6000, 0xFFAF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0xAF));
+            }
+        }
+
+        [Test]
         public void TestX()
         {
             byte result = Instruction.X(0xABCD);
