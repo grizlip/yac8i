@@ -149,6 +149,62 @@ namespace yac8i.tests
         }
 
         [Test]
+        public void TestLDRegister()
+        {
+            Chip8VM vm = new();
+            vm.registers[0] = 100;
+            vm.registers[0xF] = 200;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8000, 0xFF0F);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(100));
+                Assert.That(vm.registers[0], Is.EqualTo(100));
+            }
+        }
+
+        [Test]
+        public void TestADDNoOverflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 10;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x7000, 0x0F01);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(11));
+            }
+        }
+
+        [Test]
+        public void TestADDOverflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = byte.MaxValue;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x7000, 0x0F02);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+            }
+        }
+
+        [Test]
+        public void TestOR()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0b11110000;
+            vm.registers[1] = 0b00001111;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8001, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0b11111111));
+                Assert.That(vm.registers[1], Is.EqualTo(0b00001111));
+            }
+        }
+
+        [Test]
         public void TestX()
         {
             byte result = Instruction.X(0xABCD);

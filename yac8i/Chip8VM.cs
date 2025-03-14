@@ -259,7 +259,6 @@ namespace yac8i
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] | registers[registerYIndex]);
-                registers[0xF] = 0;
                 return true;
             },
             Emit = args =>
@@ -275,7 +274,6 @@ namespace yac8i
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] & registers[registerYIndex]);
-                registers[0xF] = 0;
                 return true;
 
             },
@@ -292,7 +290,6 @@ namespace yac8i
                 CheckRegisterIndex(registerXIndex);
                 CheckRegisterIndex(registerYIndex);
                 registers[registerXIndex] = (byte)(registers[registerXIndex] ^ registers[registerYIndex]);
-                registers[0xF] = 0;
                 return true;
 
             },
