@@ -297,6 +297,68 @@ namespace yac8i.tests
             }
         }
 
+        [Test]
+        public void TestSUBRegistersFRegisterNoUnderflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 100;
+            vm.registers[1] = 10;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8005, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.registers[1], Is.EqualTo(10));
+            }
+        }
+
+        [Test]
+        public void TestSUBRegistersFRegisterUnderflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 20;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8005, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
+        [Test]
+        public void TestSUBRegistersOtherRegisterUnderflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xA] = 20;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8005, 0x0A10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.registers[0xA], Is.EqualTo(226));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
+        [Test]
+        public void TestSUBRegistersOtherRegisterNoUnderflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xA] = 100;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8005, 0x0A10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.registers[0xA], Is.EqualTo(50));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
 
         [Test]
         public void TestX()
