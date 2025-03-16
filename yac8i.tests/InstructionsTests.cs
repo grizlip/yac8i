@@ -236,7 +236,7 @@ namespace yac8i.tests
 
 
         [Test]
-        public void TestRegistersFRegisterNoOverflow()
+        public void TestADDRegistersFRegisterNoOverflow()
         {
             Chip8VM vm = new();
             vm.registers[0xF] = 100;
@@ -251,7 +251,7 @@ namespace yac8i.tests
         }
 
         [Test]
-        public void TestRegistersFRegisterOverflow()
+        public void TestADDRegistersFRegisterOverflow()
         {
             Chip8VM vm = new();
             vm.registers[0xF] = 255;
@@ -266,7 +266,7 @@ namespace yac8i.tests
         }
 
         [Test]
-        public void TestRegistersOtherRegisterOverflow()
+        public void TestADDRegistersOtherRegisterOverflow()
         {
             Chip8VM vm = new();
             vm.registers[0xA] = 255;
@@ -282,7 +282,7 @@ namespace yac8i.tests
         }
 
         [Test]
-        public void TestRegistersOtherRegisterNoOverflow()
+        public void TestADDRegistersOtherRegisterNoOverflow()
         {
             Chip8VM vm = new();
             vm.registers[0xA] = 100;
