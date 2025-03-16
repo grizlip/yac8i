@@ -205,6 +205,100 @@ namespace yac8i.tests
         }
 
         [Test]
+        public void TestAND()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0b11111000;
+            vm.registers[1] = 0b00011111;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8002, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0b00011000));
+                Assert.That(vm.registers[1], Is.EqualTo(0b00011111));
+            }
+        }
+
+        [Test]
+        public void TestXOR()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0b11111000;
+            vm.registers[1] = 0b00011111;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8003, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0b11100111));
+                Assert.That(vm.registers[1], Is.EqualTo(0b00011111));
+            }
+        }
+
+
+        [Test]
+        public void TestRegistersFRegisterNoOverflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 100;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8004, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
+        [Test]
+        public void TestRegistersFRegisterOverflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 255;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8004, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
+        [Test]
+        public void TestRegistersOtherRegisterOverflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xA] = 255;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8004, 0x0A10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.registers[0xA], Is.EqualTo(49));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
+        [Test]
+        public void TestRegistersOtherRegisterNoOverflow()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xA] = 100;
+            vm.registers[1] = 50;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x8004, 0x0A10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.registers[0xA], Is.EqualTo(150));
+                Assert.That(vm.registers[1], Is.EqualTo(50));
+            }
+        }
+
+
+        [Test]
         public void TestX()
         {
             byte result = Instruction.X(0xABCD);

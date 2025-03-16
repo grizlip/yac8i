@@ -307,10 +307,11 @@ namespace yac8i
                 CheckRegisterIndex(registerYIndex);
                 byte xValue = registers[registerXIndex];
                 byte yValue = registers[registerYIndex];
-                registers[registerXIndex] = (byte)(xValue + yValue);
+                var result = xValue + yValue;
+                registers[registerXIndex] = (byte)result;
                 
                 //TODO: find better way to check and do this?
-                if(xValue + yValue >255)
+                if(result > 255)
                 {
                     registers[0xF] = 1;
                 }
