@@ -84,6 +84,8 @@ namespace yac8i
 
         private int programBytesCount = 0;
 
+        private Random random = new(DateTime.Now.Second);
+
         public Chip8VM()
         {
             instructions =
@@ -471,9 +473,8 @@ namespace yac8i
                 int registerXIndex = Instruction.X(args);
                 CheckRegisterIndex(registerXIndex);
                 byte nnArgs = Instruction.NN(args);
-                Random r = new(DateTime.Now.Second);
                 byte[] random = new byte[1];
-                r.NextBytes(random);
+                this.random.NextBytes(random);
                 registers[registerXIndex] = (byte)(random[0] & nnArgs);
                 return true;
             },
