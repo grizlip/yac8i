@@ -374,7 +374,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
             }
         }
-        
+
         [Test]
         public void TestSHRCarry()
         {
@@ -390,7 +390,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000001));
             }
         }
-        
+
         [Test]
         public void TestSHRRegisterFCarry()
         {
@@ -498,7 +498,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
             }
         }
-        
+
         [Test]
         public void TestSHLCarry()
         {
@@ -514,7 +514,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b10000000));
             }
         }
-        
+
         [Test]
         public void TestSHLRegisterFCarry()
         {
@@ -542,6 +542,63 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.True);
                 Assert.That(vm.registers[0xF], Is.EqualTo(0));
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
+            }
+        }
+
+        [Test]
+        public void TestSNERegistersJump()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0xAA;
+            vm.registers[1] = 0xBB;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x9000, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0xAA));
+                Assert.That(vm.registers[1], Is.EqualTo(0xBB));
+                Assert.That(vm.ProgramCounter, Is.EqualTo(516));
+            }
+        }
+
+        [Test]
+        public void TestSNERegistersNoJump()
+        {
+            Chip8VM vm = new();
+            vm.registers[0xF] = 0xAA;
+            vm.registers[1] = 0xAA;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0x9000, 0x0F10);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[0xF], Is.EqualTo(0xAA));
+                Assert.That(vm.registers[1], Is.EqualTo(0xAA));
+                Assert.That(vm.ProgramCounter, Is.EqualTo(512));
+            }
+        }
+
+        [Test]
+        public void TestLDI()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xA000, 0x0ABC);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.IRegister, Is.EqualTo(0x0ABC));
+            }
+        }
+
+        [Test]
+        public void TestJPOffset()
+        {
+            Chip8VM vm = new();
+            vm.registers[0] = 0x000F;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xB000, 0x0ABC);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(0x0ACB));
             }
         }
 
