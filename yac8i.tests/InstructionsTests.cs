@@ -603,6 +603,32 @@ namespace yac8i.tests
         }
 
         [Test]
+        [Repeat(255)]
+        public void TestRND()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xC000, 0x010F);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[1], Is.AtMost(0x000F));
+            }
+        }
+
+        [Test]
+        [Repeat(255)]
+        public void TestRNDMask()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xC000, 0x01FF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[1], Is.AtMost(0x00FF));
+            }
+        }
+
+        [Test]
         public void TestX()
         {
             byte result = Instruction.X(0xABCD);

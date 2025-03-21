@@ -497,8 +497,8 @@ namespace yac8i
                 byte[] sprite = memory.Skip(IRegister)
                                       .Take(spriteLength)
                                       .ToArray();
-                int rowBeginning = (xPosition % 64);
-                int y = (yPosition % 32);
+                int rowBeginning = xPosition % 64;
+                int y = yPosition % 32;
                 int x = rowBeginning;
 
                 for(int i = 0; i < sprite.Length;i++)
