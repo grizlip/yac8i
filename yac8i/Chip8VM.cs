@@ -25,9 +25,11 @@ namespace yac8i
 
         public IReadOnlyCollection<byte> Registers => registers;
 
-        public ushort IRegister { get; private set; } = 0;
+        public ushort IRegister { get; internal set; } = 0;
 
         public ushort ProgramCounter { get; private set; } = 0x200;
+
+        internal byte[] memory = new byte[4096];
 
         internal readonly List<Instruction> instructions;
 
@@ -35,7 +37,7 @@ namespace yac8i
         
         internal byte[] registers = new byte[16];
 
-        private readonly byte[] font = [
+        internal static readonly byte[] font = [
                                     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
                                     0x20, 0x60, 0x20, 0x20, 0x70, // 1
                                     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -57,8 +59,6 @@ namespace yac8i
         private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
         private readonly HighResolutionTimer tickTimer = new(1000f / 60f); //60 times per second
-
-        private byte[] memory = new byte[4096];
 
         private byte[] loadedProgram = null;
 
@@ -527,7 +527,7 @@ namespace yac8i
                                     break;
                                 }
                             }
-                            x=rowBeginning;
+                            x = rowBeginning;
                             y += 1;
                         }
                         else

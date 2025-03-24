@@ -6,6 +6,7 @@ namespace yac8i.tests
 {
     public class InstructionsTests
     {
+        private static int StartOfFreeMemory => Chip8VM.font.Length;
 
         [Test]
         public void TestCLS()
@@ -625,6 +626,37 @@ namespace yac8i.tests
             {
                 Assert.That(shouldIncrementPC, Is.True);
                 Assert.That(vm.registers[1], Is.AtMost(0x00FF));
+            }
+        }
+
+        [Test]
+        public void TestDRWSimple()
+        {
+            Chip8VM vm = new();
+            vm.memory[StartOfFreeMemory + 1] = 0xff;
+            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xD000, 0x01FF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.Surface[0, 0], Is.EqualTo(true));
+                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+            }
+        }
+
+        [Test]
+        public void TestDRWXOR()
+        {
+            Chip8VM vm = new();
+            vm.memory[StartOfFreeMemory + 1] = 0xff;
+            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            vm.Surface[0,0] = true;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xD000, 0x01FF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
+                Assert.That(vm.registers[0xF], Is.EqualTo(1));
             }
         }
 
