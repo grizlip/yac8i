@@ -639,9 +639,9 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                for (int i = 0; i < 8; i++)
+                for (int spriteBitIndex = 0; spriteBitIndex < 8; spriteBitIndex++)
                 {
-                    Assert.That(vm.Surface[i, 0], Is.EqualTo(true));
+                    Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
                 }
                 Assert.That(vm.registers[0xF], Is.EqualTo(0));
             }
@@ -659,9 +659,9 @@ namespace yac8i.tests
             {
                 Assert.That(shouldIncrementPC, Is.True);
                 Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
-                for (int i = 1; i < 8; i++)
+                for (int spriteBitIndex = 1; spriteBitIndex < 8; spriteBitIndex++)
                 {
-                    Assert.That(vm.Surface[i, 0], Is.EqualTo(true));
+                    Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
                 }
                 Assert.That(vm.registers[0xF], Is.EqualTo(1));
             }
