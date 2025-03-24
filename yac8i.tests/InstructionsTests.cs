@@ -639,7 +639,10 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.Surface[0, 0], Is.EqualTo(true));
+                for (int i = 0; i < 8; i++)
+                {
+                    Assert.That(vm.Surface[i, 0], Is.EqualTo(true));
+                }
                 Assert.That(vm.registers[0xF], Is.EqualTo(0));
             }
         }
@@ -650,12 +653,16 @@ namespace yac8i.tests
             Chip8VM vm = new();
             vm.memory[StartOfFreeMemory + 1] = 0xff;
             vm.IRegister = (ushort)(StartOfFreeMemory + 1);
-            vm.Surface[0,0] = true;
+            vm.Surface[0, 0] = true;
             bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xD000, 0x01FF);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
                 Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
+                for (int i = 1; i < 8; i++)
+                {
+                    Assert.That(vm.Surface[i, 0], Is.EqualTo(true));
+                }
                 Assert.That(vm.registers[0xF], Is.EqualTo(1));
             }
         }
