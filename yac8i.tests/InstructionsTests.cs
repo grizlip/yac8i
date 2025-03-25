@@ -687,6 +687,41 @@ namespace yac8i.tests
         }
 
         [Test]
+        public void TestSKPNoPress()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xE09E, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(514));
+            }
+        }
+
+        [Test]
+        public void TestSKPPress()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 1;
+            vm.UpdateKeyState(1,true);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xE09E, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(516));
+            }
+        }
+
+        [Test]
+        public void TestSKPThrows()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 100;
+            Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(vm, 0xE09E, 0x0100));
+        }
+
+
+        [Test]
         public void TestDRWSpriteClipped()
         {
             Chip8VM vm = new();
