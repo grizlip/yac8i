@@ -727,7 +727,7 @@ namespace yac8i.tests
         {
             Chip8VM vm = new();
             vm.registers[1] = 1;
-            vm.UpdateKeyState(1,true);
+            vm.UpdateKeyState(1, true);
             bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xE09E, 0x0100);
             using (Assert.EnterMultipleScope())
             {
@@ -743,6 +743,86 @@ namespace yac8i.tests
             vm.registers[1] = 100;
             Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(vm, 0xE09E, 0x0100));
         }
+
+        [Test]
+        public void TestSKPNNoPress()
+        {
+            Chip8VM vm = new();
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xE0A1, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(516));
+            }
+        }
+
+        [Test]
+        public void TestSKPNPress()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 1;
+            vm.UpdateKeyState(1, true);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xE0A1, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.False);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(514));
+            }
+        }
+
+        [Test]
+        public void TestSKPNThrows()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 100;
+            Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(vm, 0xE0A1, 0x0100));
+        }
+
+        [Test]
+        public void TestLDTimer()
+        {
+            Chip8VM vm = new()
+            {
+                delayTimer = 100
+            };
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF007, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.registers[1], Is.EqualTo(100));
+            }
+        }
+
+        [Test]
+        public void TestLDKeyNoPress()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 200;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF00A, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(false));
+                Assert.That(vm.registers[1], Is.EqualTo(200));
+                Assert.That(vm.ProgramCounter, Is.EqualTo(512));
+            }
+        }
+
+        [Test]
+        public void TestLDKeyPress()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 200;
+            vm.UpdateKeyState(2, true);
+            vm.UpdateKeyState(2, false);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF00A, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(false));
+                Assert.That(vm.registers[1], Is.EqualTo(2));
+                Assert.That(vm.ProgramCounter, Is.EqualTo(514));
+            }
+        }
+
 
         [Test]
         public void TestX()
