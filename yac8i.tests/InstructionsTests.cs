@@ -687,6 +687,30 @@ namespace yac8i.tests
         }
 
         [Test]
+        public void TestDRWSpriteClipped()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 62;
+            vm.memory[StartOfFreeMemory + 1] = 0xff;
+            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xD000, 0x01FF);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                for (int spriteBitIndex = 0; spriteBitIndex < 8; spriteBitIndex++)
+                {
+                    Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(false));
+                }
+                for (int spriteBitIndex = 62; spriteBitIndex < 64; spriteBitIndex++)
+                {
+                    Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
+                }
+
+                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+            }
+        }
+
+        [Test]
         public void TestSKPNoPress()
         {
             Chip8VM vm = new();
@@ -719,32 +743,6 @@ namespace yac8i.tests
             vm.registers[1] = 100;
             Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(vm, 0xE09E, 0x0100));
         }
-
-
-        [Test]
-        public void TestDRWSpriteClipped()
-        {
-            Chip8VM vm = new();
-            vm.registers[1] = 62;
-            vm.memory[StartOfFreeMemory + 1] = 0xff;
-            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
-            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xD000, 0x01FF);
-            using (Assert.EnterMultipleScope())
-            {
-                Assert.That(shouldIncrementPC, Is.True);
-                for (int spriteBitIndex = 0; spriteBitIndex < 8; spriteBitIndex++)
-                {
-                    Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(false));
-                }
-                for (int spriteBitIndex = 62; spriteBitIndex < 64; spriteBitIndex++)
-                {
-                    Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
-                }
-
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-            }
-        }
-
 
         [Test]
         public void TestX()
