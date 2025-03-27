@@ -779,7 +779,7 @@ namespace yac8i.tests
         }
 
         [Test]
-        public void TestLDTimer()
+        public void TestLDTimerRead()
         {
             Chip8VM vm = new()
             {
@@ -822,6 +822,52 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(514));
             }
         }
+
+        [Test]
+        public void TestLDDelayTimer()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 200;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF015, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                Assert.That(vm.registers[1], Is.EqualTo(200));
+                Assert.That(vm.delayTimer, Is.EqualTo(200));
+            }
+        }
+
+        [Test]
+        public void TestLDSoundTimer()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 200;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF018, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                Assert.That(vm.registers[1], Is.EqualTo(200));
+                Assert.That(vm.soundTimer, Is.EqualTo(200));
+            }
+        }
+
+
+        [TestCase((byte)0xF, (ushort)0xF, false, (ushort)0x1E, Description = "No overflow")]
+        [TestCase((byte)0xFF, (ushort)0x0FFF, true, (ushort)0x10FE, Description = "Overflow")]
+        public void TestADDI(byte regValue, ushort iRegisterValue, bool overflow, ushort result)
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = regValue;
+            vm.IRegister = iRegisterValue;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF01E, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                Assert.That(vm.IRegister, Is.EqualTo(result));
+                Assert.That(vm.registers[0xF], overflow ? Is.EqualTo(1) : Is.EqualTo(0));
+            }
+        }
+
 
 
         [Test]

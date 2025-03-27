@@ -56,6 +56,7 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
         internal  byte delayTimer = 0;
+        internal  byte soundTimer = 0;
 
         private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
@@ -64,8 +65,6 @@ namespace yac8i
         private byte[] loadedProgram = null;
 
         private int instructionsToExecuteInFrame = 0;
-
-        private byte soundTimer = 0;
 
         private bool beepStatus = false;
 
