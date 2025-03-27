@@ -868,7 +868,18 @@ namespace yac8i.tests
             }
         }
 
-
+        [Test]
+        public void TestLDFont()
+        {
+            Chip8VM vm = new();
+            vm.registers[1] = 2;
+            bool shouldIncrementPC = ExecuteSingleInstruction(vm, 0xF029, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                Assert.That(vm.IRegister, Is.EqualTo(10));
+            }
+        }
 
         [Test]
         public void TestX()
