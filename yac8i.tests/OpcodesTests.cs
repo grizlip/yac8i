@@ -13,6 +13,7 @@ namespace yac8i.tests
         {
             vm = new();
         }
+
         [Test]
         public void TestCLS()
         {
@@ -24,6 +25,7 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.True);
             }
         }
+
         [Test]
         public void TestRETException()
         {
@@ -33,6 +35,7 @@ namespace yac8i.tests
                     ExecuteSingleInstruction(0x00EE, 100);
                 });
         }
+
         [Test]
         public void TestRETCorrect()
         {
@@ -44,6 +47,7 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.False);
             }
         }
+
         [Test]
         public void TestJP()
         {
@@ -54,6 +58,7 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.False);
             }
         }
+
         [Test]
         public void TestCALL()
         {
@@ -65,12 +70,14 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.False);
             }
         }
+
         [Test]
         public void TestSENoJump()
         {
             bool shouldIncrementPC = ExecuteSingleInstruction(0x3000, 0xFFFF);
             Assert.That(shouldIncrementPC, Is.True);
         }
+
         [Test]
         public void TestSEJump()
         {
@@ -82,6 +89,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
+
         [Test]
         public void TestSNENoJump()
         {
@@ -92,6 +100,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
+
         [Test]
         public void TestSNEJump()
         {
@@ -99,6 +108,7 @@ namespace yac8i.tests
             bool shouldIncrementPC = ExecuteSingleInstruction(0x4000, 0xFFFF);
             Assert.That(shouldIncrementPC, Is.True);
         }
+
         [Test]
         public void TestSERegisterNoJump()
         {
@@ -106,6 +116,7 @@ namespace yac8i.tests
             bool shouldIncrementPC = ExecuteSingleInstruction(0x5000, 0xFFAF);
             Assert.That(shouldIncrementPC, Is.True);
         }
+
         [Test]
         public void TestSERegisterJump()
         {
@@ -118,6 +129,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
+
         [Test]
         public void TestLD()
         {
@@ -128,6 +140,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(0xAF));
             }
         }
+
         [Test]
         public void TestLDRegister()
         {
@@ -141,6 +154,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0], Is.EqualTo(100));
             }
         }
+
         [Test]
         public void TestADDNoOverflow()
         {
@@ -152,6 +166,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(11));
             }
         }
+
         [Test]
         public void TestADDOverflow()
         {
@@ -163,6 +178,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(1));
             }
         }
+
         [Test]
         public void TestOR()
         {
@@ -176,6 +192,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00001111));
             }
         }
+
         [Test]
         public void TestAND()
         {
@@ -189,6 +206,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00011111));
             }
         }
+
         [Test]
         public void TestXOR()
         {
@@ -202,6 +220,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00011111));
             }
         }
+
         [Test]
         public void TestADDRegistersFRegisterNoOverflow()
         {
@@ -215,6 +234,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestADDRegistersFRegisterOverflow()
         {
@@ -228,6 +248,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestADDRegistersOtherRegisterOverflow()
         {
@@ -242,6 +263,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestADDRegistersOtherRegisterNoOverflow()
         {
@@ -256,6 +278,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestSUBRegistersFRegisterNoUnderflow()
         {
@@ -269,6 +292,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(10));
             }
         }
+
         [Test]
         public void TestSUBRegistersFRegisterUnderflow()
         {
@@ -282,6 +306,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestSUBRegistersOtherRegisterUnderflow()
         {
@@ -296,6 +321,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestSUBRegistersOtherRegisterNoUnderflow()
         {
@@ -310,6 +336,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestSHR()
         {
@@ -324,6 +351,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
             }
         }
+
         [Test]
         public void TestSHRCarry()
         {
@@ -338,6 +366,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000001));
             }
         }
+
         [Test]
         public void TestSHRRegisterFCarry()
         {
@@ -351,6 +380,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000001));
             }
         }
+
         [Test]
         public void TestSHRRegisterF()
         {
@@ -364,6 +394,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
             }
         }
+
         [Test]
         public void TestSUBNRegistersFRegisterNoUnderflow()
         {
@@ -377,6 +408,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(100));
             }
         }
+
         [Test]
         public void TestSUBNRegistersFRegisterUnderflow()
         {
@@ -390,6 +422,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(20));
             }
         }
+
         [Test]
         public void TestSUBNRegistersOtherRegisterNoUnderflow()
         {
@@ -404,6 +437,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestSUBNRegistersOtherRegisterUnderflow()
         {
@@ -418,6 +452,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(50));
             }
         }
+
         [Test]
         public void TestSHL()
         {
@@ -432,6 +467,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
             }
         }
+
         [Test]
         public void TestSHLCarry()
         {
@@ -446,6 +482,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b10000000));
             }
         }
+
         [Test]
         public void TestSHLRegisterFCarry()
         {
@@ -459,6 +496,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b10000000));
             }
         }
+
         [Test]
         public void TestSHLRegisterF()
         {
@@ -472,6 +510,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
             }
         }
+
         [Test]
         public void TestSNERegistersJump()
         {
@@ -486,6 +525,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
+
         [Test]
         public void TestSNERegistersNoJump()
         {
@@ -500,6 +540,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(512));
             }
         }
+
         [Test]
         public void TestLDI()
         {
@@ -510,6 +551,7 @@ namespace yac8i.tests
                 Assert.That(vm.IRegister, Is.EqualTo(0x0ABC));
             }
         }
+
         [Test]
         public void TestJPOffset()
         {
@@ -521,6 +563,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(0x0ACB));
             }
         }
+
         [Test]
         [Repeat(255)]
         public void TestRND()
@@ -532,6 +575,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.AtMost(0x000F));
             }
         }
+
         [Test]
         [Repeat(255)]
         public void TestRNDMask()
@@ -543,6 +587,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.AtMost(0x00FF));
             }
         }
+
         [Test]
         public void TestDRWSimple()
         {
@@ -559,6 +604,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(0));
             }
         }
+
         [Test]
         public void TestDRWXOR()
         {
@@ -577,6 +623,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(1));
             }
         }
+
         [Test]
         public void TestDRWSpriteOverflow()
         {
@@ -594,6 +641,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(0));
             }
         }
+
         [Test]
         public void TestDRWSpriteClipped()
         {
@@ -615,6 +663,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], Is.EqualTo(0));
             }
         }
+
         [Test]
         public void TestSKPNoPress()
         {
@@ -625,6 +674,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(514));
             }
         }
+
         [Test]
         public void TestSKPPress()
         {
@@ -637,12 +687,14 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
+
         [Test]
         public void TestSKPThrows()
         {
             vm.registers[1] = 100;
             Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(0xE09E, 0x0100));
         }
+
         [Test]
         public void TestSKPNNoPress()
         {
@@ -653,6 +705,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
+
         [Test]
         public void TestSKPNPress()
         {
@@ -665,12 +718,14 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(514));
             }
         }
+
         [Test]
         public void TestSKPNThrows()
         {
             vm.registers[1] = 100;
             Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(0xE0A1, 0x0100));
         }
+
         [Test]
         public void TestLDTimerRead()
         {
@@ -682,6 +737,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[1], Is.EqualTo(100));
             }
         }
+
         [Test]
         public void TestLDKeyNoPress()
         {
@@ -694,6 +750,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(512));
             }
         }
+
         [Test]
         public void TestLDKeyPress()
         {
@@ -708,6 +765,7 @@ namespace yac8i.tests
                 Assert.That(vm.ProgramCounter, Is.EqualTo(514));
             }
         }
+
         [Test]
         public void TestLDDelayTimer()
         {
@@ -720,6 +778,7 @@ namespace yac8i.tests
                 Assert.That(vm.delayTimer, Is.EqualTo(200));
             }
         }
+
         [Test]
         public void TestLDSoundTimer()
         {
@@ -746,6 +805,7 @@ namespace yac8i.tests
                 Assert.That(vm.registers[0xF], overflow ? Is.EqualTo(1) : Is.EqualTo(0));
             }
         }
+
         [Test]
         public void TestLDFont()
         {
