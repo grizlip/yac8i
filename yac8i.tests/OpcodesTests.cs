@@ -791,6 +791,7 @@ namespace yac8i.tests
                 Assert.That(vm.soundTimer, Is.EqualTo(200));
             }
         }
+        
         [TestCase((byte)0xF, (ushort)0xF, false, (ushort)0x1E, Description = "No overflow")]
         [TestCase((byte)0xFF, (ushort)0x0FFF, true, (ushort)0x10FE, Description = "Overflow")]
         public void TestADDI(byte regValue, ushort iRegisterValue, bool overflow, ushort result)
@@ -817,6 +818,79 @@ namespace yac8i.tests
                 Assert.That(vm.IRegister, Is.EqualTo(10));
             }
         }
+
+        [Test]
+        public void TestBCD()
+        {
+            vm.registers[1] = 123;
+            vm.IRegister = 512;
+            bool shouldIncrementPC = ExecuteSingleInstruction(0xF033, 0x0100);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                Assert.That(vm.memory[vm.IRegister], Is.EqualTo(1));
+                Assert.That(vm.memory[vm.IRegister + 1], Is.EqualTo(2));
+                Assert.That(vm.memory[vm.IRegister + 2], Is.EqualTo(3));
+            }
+        }
+
+        [TestCase(new byte[] { 1, 2, 3, 4 })]
+        [TestCase(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 })]
+        public void TestLDIRegistersStore(byte[] registers)
+        {
+            int registersCount;
+            ushort baseIRegisterValue = 512;
+            for (registersCount = 0; registersCount < registers.Length; registersCount++)
+            {
+                vm.registers[registersCount] = registers[registersCount];
+            }
+            vm.IRegister = baseIRegisterValue;
+            ushort args = (ushort)((registers.Length - 1) << 8);
+            bool shouldIncrementPC = ExecuteSingleInstruction(0xF055, args);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                for (int i = 0; i < registersCount; i++)
+                {
+                    Assert.That(vm.memory[baseIRegisterValue + i], Is.EqualTo(registers[i]));
+                }
+                Assert.That(vm.IRegister, Is.EqualTo(baseIRegisterValue + registersCount));
+                for (int i = vm.IRegister; i < vm.IRegister + 16 - registersCount; i++)
+                {
+                    Assert.That(vm.memory[i], Is.EqualTo(0));
+                }
+            }
+        }
+
+        [TestCase(new byte[] { 1, 2, 3, 4 })]
+        [TestCase(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 })]
+        public void TestLDIRegistersRestore(byte[] registers)
+        {
+            int registersCount;
+            ushort baseIRegisterValue = 512;
+            for (registersCount = 0; registersCount < registers.Length; registersCount++)
+            {
+                vm.memory[baseIRegisterValue + registersCount] = registers[registersCount];
+            }
+            vm.IRegister = baseIRegisterValue;
+            ushort args = (ushort)((registers.Length - 1) << 8);
+
+            bool shouldIncrementPC = ExecuteSingleInstruction(0xF065, args);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.EqualTo(true));
+                for (int i = 0; i < registersCount; i++)
+                {
+                    Assert.That(vm.memory[baseIRegisterValue + i], Is.EqualTo(registers[i]));
+                }
+                Assert.That(vm.IRegister, Is.EqualTo(baseIRegisterValue + registersCount));
+                for (int i = vm.IRegister; i < vm.IRegister + 12; i++)
+                {
+                    Assert.That(vm.memory[i], Is.EqualTo(0));
+                }
+            }
+        }
+
         private bool ExecuteSingleInstruction(ushort opcode, ushort args) => vm.instructions.Single(instruction => instruction.Opcode == opcode).Execute(args);
     }
 }
