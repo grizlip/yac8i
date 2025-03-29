@@ -75,7 +75,11 @@ namespace yac8i.tests
         public void TestSENoJump()
         {
             bool shouldIncrementPC = ExecuteSingleInstruction(0x3000, 0xFFFF);
-            Assert.That(shouldIncrementPC, Is.True);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(512));
+            }
         }
 
         [Test]
@@ -106,7 +110,11 @@ namespace yac8i.tests
         {
             vm.registers[0xF] = 0xFF;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x4000, 0xFFFF);
-            Assert.That(shouldIncrementPC, Is.True);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(512));
+            }
         }
 
         [Test]
@@ -114,7 +122,11 @@ namespace yac8i.tests
         {
             vm.registers[0xF] = 1;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x5000, 0xFFAF);
-            Assert.That(shouldIncrementPC, Is.True);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.ProgramCounter, Is.EqualTo(512));
+            }
         }
 
         [Test]
