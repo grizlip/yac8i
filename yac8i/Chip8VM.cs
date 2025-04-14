@@ -33,8 +33,8 @@ namespace yac8i
 
         internal readonly List<Instruction> instructions;
 
-        internal  Stack<ushort> stack = new();
-        
+        internal Stack<ushort> stack = new();
+
         internal byte[] registers = new byte[16];
 
         internal static readonly byte[] font = [
@@ -55,8 +55,8 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
-        internal  byte delayTimer = 0;
-        internal  byte soundTimer = 0;
+        internal byte delayTimer = 0;
+        internal byte soundTimer = 0;
 
         private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
@@ -856,6 +856,15 @@ namespace yac8i
             }
 
             return result;
+        }
+
+        public async Task LoadAsync(Stream program)
+        {
+            programBytesCount = await program.ReadAsync(memory.AsMemory(512, memory.Length - 512));
+            loadedProgram = (byte[])memory.Clone();
+
+            loaded = true;
+            ProgramLoaded?.Invoke(this, programBytesCount);
         }
 
         public bool Load(string programSourceFilePath)
