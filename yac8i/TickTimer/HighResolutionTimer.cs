@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 
-namespace yac8i
+namespace yac8i.TickTimer
 {
 
     /// <summary>
@@ -16,7 +16,7 @@ namespace yac8i
     /// Which is important, because a state of the event handler attached to  Elapsed,
     /// may be left unprotected of multi threaded access
     /// </remarks>
-    internal class HighResolutionTimer
+    internal class HighResolutionTimer : ITickTimer
     {
         /// <summary>
         /// Tick time length in [ms]
@@ -36,7 +36,7 @@ namespace yac8i
         /// <summary>
         /// Invoked when the timer is elapsed
         /// </summary>
-        public event EventHandler<HighResolutionTimerElapsedEventArgs> Elapsed;
+        public event EventHandler<TickTimerElapsedEventArgs> Elapsed;
 
         /// <summary>
         /// The interval of timer ticks [ms]
@@ -172,7 +172,7 @@ namespace yac8i
 
 
                 double delay = elapsed - nextTrigger;
-                Elapsed?.Invoke(this, new HighResolutionTimerElapsedEventArgs(delay));
+                Elapsed?.Invoke(this, new TickTimerElapsedEventArgs(delay));
 
                 if (!_isRunning)
                     return;
@@ -195,14 +195,5 @@ namespace yac8i
     }
 
 
-    public class HighResolutionTimerElapsedEventArgs : EventArgs
-    {
-        /// <summary>/// Real timer delay in [ms]/// </summary>
-        public double Delay { get; }
-
-        internal HighResolutionTimerElapsedEventArgs(double delay)
-        {
-            Delay = delay;
-        }
-    }
+    
 }

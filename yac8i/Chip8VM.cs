@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using yac8i.TickTimer;
 
 namespace yac8i
 {
@@ -60,7 +61,7 @@ namespace yac8i
 
         private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
-        private readonly HighResolutionTimer tickTimer = new(1000f / 60f); //60 times per second
+        private readonly ITickTimer tickTimer;
 
         private byte[] loadedProgram = null;
 
@@ -84,8 +85,16 @@ namespace yac8i
 
         private Random random = new(DateTime.Now.Second);
 
-        public Chip8VM()
+        public Chip8VM(ITickTimer tickTimer = null)
         {
+            if (tickTimer == null)
+            {
+                this.tickTimer = new HighResolutionTimer(1000f / 60f); //60 times per second 
+            }
+            else
+            {
+                this.tickTimer = tickTimer;
+            }
             instructions =
         [
             // TODO: This instruction collides with 0x00EF and 0x00E0
@@ -1091,7 +1100,7 @@ namespace yac8i
             return executed;
         }
 
-        private void OnTick(object sender, HighResolutionTimerElapsedEventArgs args)
+        private void OnTick(object sender, TickTimerElapsedEventArgs args)
         {
             int delayedInstructions = (int)Math.Floor(instructionsPerFrame * (args.Delay / tickTimer.Interval));
 
