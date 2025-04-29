@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>yac8i.blazorwasm</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="yac8i.blazorwasm.styles.css" rel="stylesheet" />
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <canvas id="myCanvas" width="400" height="300"></canvas>
+    <script src="_framework/blazor.webassembly.js"> </script>
+    <script>
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        let dotNetHelper;
+        window.receiveArrayBuffer = function (base64String) {
+            let binaryString = atob(base64String);
+            let arrayBuffer = new Uint8ClampedArray(binaryString.length);
+
+            for (let i = 0; i < binaryString.length; i++) {
+                arrayBuffer[i] = binaryString.charCodeAt(i);
+            }
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.putImageData(new ImageData(arrayBuffer, 64),0,0);
+        };
+
+        window.getReference = function (dotNetReference) {
+            dotNetHelper = dotNetReference;
+        };
+
+        window.draw = function (timestamp) {
+            
+            dotNetHelper.invokeMethodAsync('OnTick');
+            // Request the next frame
+            requestAnimationFrame(draw);
+        }
+    </script>
+</body>
+
+</html>

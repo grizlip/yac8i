@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorCacheBootResources>false</BlazorCacheBootResources>
+    <BlazorWebAssemblyEnableAOT>true</BlazorWebAssemblyEnableAOT>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\yac8i\yac8i.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"  Version="8.0.14" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

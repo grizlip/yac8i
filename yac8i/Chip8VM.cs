@@ -83,7 +83,7 @@ namespace yac8i
 
         private int programBytesCount = 0;
 
-        private Random random = new(DateTime.Now.Second);
+        private readonly Random random = new(DateTime.Now.Second);
 
         public Chip8VM(ITickTimer tickTimer = null)
         {
