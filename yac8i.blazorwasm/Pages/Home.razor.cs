@@ -55,6 +55,19 @@ namespace yac8i.blazorwasm.Pages
             await SendArrayBufferToJavaScript(surface);
         }
 
+        [JSInvokable]
+        public void OnKeyDown(string  arg)
+        {
+            Console.WriteLine(arg);
+            
+        }
+
+        [JSInvokable]
+        public void OnKeyUp(string arg)
+        {
+            Console.WriteLine(arg);
+        }
+
         public void Dispose()
         {
             objRef?.Dispose();

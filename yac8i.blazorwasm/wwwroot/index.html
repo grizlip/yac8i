@@ -35,6 +35,13 @@
         const canvas = document.getElementById('myCanvas');
         const ctx = canvas.getContext('2d');
         let dotNetHelper;
+        document.onkeydown = function (evt) {
+            dotNetHelper.invokeMethodAsync('OnKeyDown', evt.key);
+        };
+        document.onkeyup = function (evt){
+            dotNetHelper.invokeMethodAsync('OnKeyUp', evt.key);
+        };
+
         window.receiveArrayBuffer = function (base64String) {
             let binaryString = atob(base64String);
             let arrayBuffer = new Uint8ClampedArray(binaryString.length);
@@ -42,9 +49,9 @@
             for (let i = 0; i < binaryString.length; i++) {
                 arrayBuffer[i] = binaryString.charCodeAt(i);
             }
-            
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.putImageData(new ImageData(arrayBuffer, 64),0,0);
+            ctx.putImageData(new ImageData(arrayBuffer, 64), 0, 0);
         };
 
         window.getReference = function (dotNetReference) {
@@ -52,7 +59,7 @@
         };
 
         window.draw = function (timestamp) {
-            
+
             dotNetHelper.invokeMethodAsync('OnTick');
             // Request the next frame
             requestAnimationFrame(draw);
