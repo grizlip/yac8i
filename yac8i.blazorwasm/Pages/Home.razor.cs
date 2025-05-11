@@ -42,14 +42,8 @@ namespace yac8i.blazorwasm.Pages
             vm = new(jsTickTimer);
         }
 
-        public async Task SendArrayBufferToJavaScript(byte[] data)
-        {
-            string base64String = Convert.ToBase64String(data);
-            await JSInterop!.InvokeVoidAsync("receiveArrayBuffer", base64String);
-        }
-
         [JSInvokable]
-        public async Task OnTick()
+        public string  OnTick()
         {
             jsTickTimer.Tick();
 
@@ -72,7 +66,7 @@ namespace yac8i.blazorwasm.Pages
                 }
             }
 
-            await SendArrayBufferToJavaScript(surface);
+            return Convert.ToBase64String(surface);
         }
 
         [JSInvokable]
