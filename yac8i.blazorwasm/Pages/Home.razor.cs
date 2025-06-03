@@ -28,6 +28,12 @@ namespace yac8i.blazorwasm.Pages
                 {"v",0xF},
             };
 
+        public ushort ProgramCounter => vm?.ProgramCounter ?? 0;
+
+        public ushort IRegister => vm?.IRegister ?? 0;
+
+        public byte[] Registers => vm?.Registers.ToArray() ?? Array.Empty<byte>();
+
         private readonly byte[] surface = new byte[64 * 32 * 4];//8192
         private readonly JsTickTimer jsTickTimer;
         private readonly Chip8VM vm;
@@ -46,7 +52,8 @@ namespace yac8i.blazorwasm.Pages
         public string  OnTick()
         {
             jsTickTimer.Tick();
-
+           
+            StateHasChanged();
             for (int i = 0; i < vm.Surface.GetLength(0); i++)
             {
                 for (int j = 0; j < vm.Surface.GetLength(1); j++)
