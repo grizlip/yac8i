@@ -10,27 +10,6 @@ namespace yac8i.blazorwasm.Pages
     [System.Runtime.Versioning.SupportedOSPlatform("browser")]
     public partial class Home : IDisposable
     {
-        private static readonly Dictionary<string, ushort> keysMapping = new()
-            {
-                {"1",0x1},
-                {"2",0x2},
-                {"3",0x3},
-                {"4",0xC},
-                {"q",0x4},
-                {"w",0x5},
-                {"e",0x6},
-                {"r",0xD},
-                {"a",0x7},
-                {"s",0x8},
-                {"d",0x9},
-                {"f",0xE},
-                {"z",0xA},
-                {"x",0x0},
-                {"c",0xB},
-                {"v",0xF},
-            };
-        private readonly List<ushort> opcodes = [];
-
         public ushort ProgramCounter => vm?.ProgramCounter ?? 0;
 
         public ushort IRegister => vm?.IRegister ?? 0;
@@ -39,6 +18,7 @@ namespace yac8i.blazorwasm.Pages
 
         public IReadOnlyCollection<Instruction> Instructions => instructions;
 
+        private readonly List<ushort> opcodes = [];
         private readonly byte[] surface = new byte[64 * 32 * 4];//8192
         private readonly List<Instruction> instructions = [];
         private readonly JsTickTimer jsTickTimer;
@@ -147,11 +127,31 @@ namespace yac8i.blazorwasm.Pages
             instructions.Clear();
             foreach (var opcode in opcodes)
             {
-                instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), ProgramCounter == address));   
+                instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), ProgramCounter == address));
                 address += 2;
             }
         }
-        
+
+        private static readonly Dictionary<string, ushort> keysMapping = new()
+            {
+                {"1",0x1},
+                {"2",0x2},
+                {"3",0x3},
+                {"4",0xC},
+                {"q",0x4},
+                {"w",0x5},
+                {"e",0x6},
+                {"r",0xD},
+                {"a",0x7},
+                {"s",0x8},
+                {"d",0x9},
+                {"f",0xE},
+                {"z",0xA},
+                {"x",0x0},
+                {"c",0xB},
+                {"v",0xF},
+            };
+
         private class JsTickTimer : ITickTimer
         {
             public event EventHandler<TickTimerElapsedEventArgs>? Elapsed;
