@@ -5,6 +5,8 @@ using yac8i.TickTimer;
 
 namespace yac8i.blazorwasm.Pages
 {
+    public record Instruction(ushort Address, string Mnemonic, bool Current);
+
     [System.Runtime.Versioning.SupportedOSPlatform("browser")]
     public partial class Home : IDisposable
     {
@@ -27,14 +29,18 @@ namespace yac8i.blazorwasm.Pages
                 {"c",0xB},
                 {"v",0xF},
             };
+        private readonly List<ushort> opcodes = [];
 
         public ushort ProgramCounter => vm?.ProgramCounter ?? 0;
 
         public ushort IRegister => vm?.IRegister ?? 0;
 
-        public byte[] Registers => vm?.Registers.ToArray() ?? Array.Empty<byte>();
+        public byte[] Registers => vm?.Registers.ToArray() ?? [];
+
+        public IReadOnlyCollection<Instruction> Instructions => instructions;
 
         private readonly byte[] surface = new byte[64 * 32 * 4];//8192
+        private readonly List<Instruction> instructions = [];
         private readonly JsTickTimer jsTickTimer;
         private readonly Chip8VM vm;
         private DotNetObjectReference<Home>? objRef;
@@ -46,13 +52,14 @@ namespace yac8i.blazorwasm.Pages
         {
             jsTickTimer = new();
             vm = new(jsTickTimer);
+            vm.ProgramLoaded += OnProgramLoaded;
         }
 
         [JSInvokable]
-        public string  OnTick()
+        public string OnTick()
         {
             jsTickTimer.Tick();
-           
+            UpdateInstructions();
             StateHasChanged();
             for (int i = 0; i < vm.Surface.GetLength(0); i++)
             {
@@ -98,7 +105,7 @@ namespace yac8i.blazorwasm.Pages
         {
             objRef?.Dispose();
         }
-        
+
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)
@@ -120,9 +127,31 @@ namespace yac8i.blazorwasm.Pages
             vm.StopAndReset();
             await vm.LoadAsync(e.File.OpenReadStream());
             await vm.StartAsync(CancellationToken.None);
+            opcodes.Clear();
+
         }
 
+        private void OnProgramLoaded(object? sender, int bytesCount)
+        {
+            int bytesCountAdjusted = bytesCount + 512;
+            for (uint i = 512; i < bytesCountAdjusted; i += 2)
+            {
+                opcodes.Add(vm.GetOpcode(i));
+            }
+            UpdateInstructions();
+        }
 
+        private void UpdateInstructions()
+        {
+            ushort address = 512;
+            instructions.Clear();
+            foreach (var opcode in opcodes)
+            {
+                instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), ProgramCounter == address));   
+                address += 2;
+            }
+        }
+        
         private class JsTickTimer : ITickTimer
         {
             public event EventHandler<TickTimerElapsedEventArgs>? Elapsed;

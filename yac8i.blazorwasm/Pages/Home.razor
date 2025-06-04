@@ -6,7 +6,6 @@
     <FluentAccordionItem Heading="Program counter">
         Program counter: @ProgramCounter
     </FluentAccordionItem>
-
     <FluentAccordionItem Heading="Registers">
         <p>IRegister: @string.Format("0x{0}",@IRegister.ToString("x2"))</p>
         <FluentStack Orientation="Orientation.Vertical">
@@ -15,8 +14,24 @@
                 int registerValue = @Registers[i];
                 int localI = i + 1;
 
-               <p>@localI:@string.Format("0x{0}",@registerValue.ToString("x2"))</p>
+                <p>@localI:@string.Format("0x{0}",@registerValue.ToString("x2"))</p>
             }
         </FluentStack>
+    </FluentAccordionItem>
+    <FluentAccordionItem Heading="Source">
+        @foreach (var instruction in @Instructions)
+        {
+            string  displayInstruction = string.Format("{0} :: {1}", instruction.Address, instruction.Mnemonic);
+ 
+            if (instruction.Current)
+            {
+                <div><b>@displayInstruction</b></div>
+            }
+            else
+            {
+                <div>@displayInstruction</div>
+            }
+            <br />
+        }
     </FluentAccordionItem>
 </FluentAccordion>
