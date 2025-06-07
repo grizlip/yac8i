@@ -26,14 +26,14 @@
         <div class="loading-progress-text"></div>
     </div>
 
-    <div id="blazor-error-ui" >
+    <div id="blazor-error-ui">
         An unhandled error has occurred.
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
 
-    
-    <canvas id="myCanvas" width="400" height="300" style="float: left; width: 50%"/>
+
+    <canvas id="myCanvas" width="400" height="300" style="float: left; width: 50%" />
     <script src="_framework/blazor.webassembly.js"> </script>
     <script>
         const canvas = document.getElementById('myCanvas');
@@ -51,26 +51,36 @@
         window.getReference = function (dotNetReference) {
             dotNetHelper = dotNetReference;
         };
-
+        let last
         window.draw = function (timestamp) {
+            if (last === undefined) {
+                last = timestamp;
+            }
+            const elapsed = timestamp - last;
+            if (elapsed >= 16) {
+                dotNetHelper.invokeMethodAsync('OnTick').
+                    then(base64String => {
+                        let binaryString = atob(base64String);
+                        let arrayBuffer = new Uint8ClampedArray(binaryString.length);
 
-            dotNetHelper.invokeMethodAsync('OnTick').
-                then(base64String => {
-                    let binaryString = atob(base64String);
-                    let arrayBuffer = new Uint8ClampedArray(binaryString.length);
-
-                    for (let i = 0; i < binaryString.length; i++) {
-                        arrayBuffer[i] = binaryString.charCodeAt(i);
-                    }
-                    //scale image
-                    window.createImageBitmap(new ImageData(arrayBuffer, 64))
-                        .then((img) => {
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            ctx.drawImage(img, 0, 0, 400, 300);
-                            // Request the next frame
-                            requestAnimationFrame(draw);
-                        });
-                });
+                        for (let i = 0; i < binaryString.length; i++) {
+                            arrayBuffer[i] = binaryString.charCodeAt(i);
+                        }
+                        //scale image
+                        window.createImageBitmap(new ImageData(arrayBuffer, 64))
+                            .then((img) => {
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0, 400, 300);
+                                // Request the next frame
+                                requestAnimationFrame(draw);
+                            });
+                    });
+                    last = timestamp;
+            }
+            else
+            {
+                requestAnimationFrame(draw);
+            }
 
         }
     </script>
