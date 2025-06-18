@@ -1,3 +1,4 @@
+using KristofferStrube.Blazor.WebAudio;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
@@ -8,7 +9,7 @@ namespace yac8i.blazorwasm.Pages
     public record Instruction(ushort Address, string Mnemonic, bool Current);
 
     [System.Runtime.Versioning.SupportedOSPlatform("browser")]
-    public partial class Home : IDisposable
+    public partial class Home : IDisposable, IAsyncDisposable
     {
         public ushort ProgramCounter => vm?.ProgramCounter ?? 0;
 
@@ -24,6 +25,10 @@ namespace yac8i.blazorwasm.Pages
         private readonly JsTickTimer jsTickTimer;
         private readonly Chip8VM vm;
         private DotNetObjectReference<Home>? objRef;
+        private AudioContext? audioContext;
+        private OscillatorNode? oscillatorNode;
+        private GainNode? gainNode;
+        private AudioDestinationNode? audioDestinationNode;
 
         [Inject]
         public IJSRuntime? JSInterop { get; set; }
@@ -33,6 +38,7 @@ namespace yac8i.blazorwasm.Pages
             jsTickTimer = new();
             vm = new(jsTickTimer);
             vm.ProgramLoaded += OnProgramLoaded;
+            vm.BeepStatus += OnBeepStatusChanged;
         }
 
         [JSInvokable]
@@ -80,10 +86,84 @@ namespace yac8i.blazorwasm.Pages
                 vm.UpdateKeyState(key, false);
             }
         }
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsyncCore().ConfigureAwait(false);
+
+            Dispose(disposing: false);
+            GC.SuppressFinalize(this);
+        }
 
         public void Dispose()
         {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                vm.ProgramLoaded -= OnProgramLoaded;
+                vm.BeepStatus -= OnBeepStatusChanged;
+                objRef?.Dispose();
+                objRef = null;
+
+                if (audioContext is IDisposable disposableAudioContext)
+                {
+                    disposableAudioContext.Dispose();
+                    audioContext = null;
+                }
+                if (oscillatorNode is IDisposable disposableOscillator)
+                {
+                    disposableOscillator.Dispose();
+                    oscillatorNode = null;
+                }
+                if (gainNode is IDisposable disposableGainNode)
+                {
+                    disposableGainNode.Dispose();
+                    gainNode = null;
+                }
+
+                if (audioDestinationNode is IDisposable disposableAudioDestinationNode)
+                {
+                    disposableAudioDestinationNode.Dispose();
+                    audioDestinationNode = null;
+                }
+            }
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            if (audioContext is not null)
+            {
+                await audioContext.DisposeAsync().ConfigureAwait(false);
+            }
+
+            if (oscillatorNode is not null)
+            {
+                await oscillatorNode.DisposeAsync().ConfigureAwait(false);
+            }
+
+            if (gainNode is not null)
+            {
+                await gainNode.DisposeAsync().ConfigureAwait(false);
+            }
+
+            if (audioDestinationNode is not null)
+            {
+                await audioDestinationNode.DisposeAsync().ConfigureAwait(false);
+            }
+
+            vm.ProgramLoaded -= OnProgramLoaded;
+            vm.BeepStatus -= OnBeepStatusChanged;
             objRef?.Dispose();
+            objRef = null;
+
+            audioContext = null;
+            oscillatorNode = null;
+            gainNode = null;
+            audioDestinationNode = null;
         }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -96,6 +176,19 @@ namespace yac8i.blazorwasm.Pages
                   };
                 objRef = DotNetObjectReference.Create(this);
                 await JSInterop!.InvokeVoidAsync("getReference", objRef);
+
+                audioContext = await AudioContext.CreateAsync(JSInterop!);
+
+                gainNode = await GainNode.CreateAsync(JSInterop!, audioContext, new()
+                {
+                    Gain = 0.1f
+                });
+
+                audioDestinationNode = await audioContext.GetDestinationAsync();
+
+                await gainNode.ConnectAsync(audioDestinationNode);
+
+
                 //start animation, when blazor loads
                 await JSInterop!.InvokeVoidAsync("draw");
             }
@@ -111,6 +204,28 @@ namespace yac8i.blazorwasm.Pages
 
         }
 
+        private async void OnBeepStatusChanged(object? sender, bool status)
+        {
+            if (status)
+            {
+                oscillatorNode = await OscillatorNode.CreateAsync(JSInterop!, audioContext!, new()
+                {
+                    Type = OscillatorType.Sine,
+                    Frequency = 440,
+                });
+                await oscillatorNode.ConnectAsync(gainNode!);
+                await oscillatorNode.StartAsync();
+            }
+            else
+            {
+                if (oscillatorNode is not null)
+                {
+                    await oscillatorNode.StopAsync();
+                    await oscillatorNode.DisconnectAsync();
+                    oscillatorNode = null;
+                }
+            }
+        }
         private void OnProgramLoaded(object? sender, int bytesCount)
         {
             int bytesCountAdjusted = bytesCount + 512;

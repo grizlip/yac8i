@@ -13,10 +13,11 @@
     <ProjectReference Include="..\yac8i\yac8i.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="KristofferStrube.Blazor.WebAudio" Version="0.1.0-alpha.13" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.11.9" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.11.9" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.14" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"  Version="8.0.14" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.14" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

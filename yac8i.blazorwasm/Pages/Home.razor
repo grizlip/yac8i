@@ -19,19 +19,21 @@
         </FluentStack>
     </FluentAccordionItem>
     <FluentAccordionItem Heading="Source">
-        @foreach (var instruction in @Instructions)
-        {
-            string  displayInstruction = string.Format("{0} :: {1}", instruction.Address, instruction.Mnemonic);
- 
-            if (instruction.Current)
+        <div style="height: 500px; width: 200px; overflow:auto;">
+            @foreach (var instruction in @Instructions)
             {
-                <div><b>@displayInstruction</b></div>
+                string displayInstruction = string.Format("{0} :: {1}", instruction.Address, instruction.Mnemonic);
+
+                if (instruction.Current)
+                {
+                    <div><b>@displayInstruction</b></div>
+                }
+                else
+                {
+                    <div>@displayInstruction</div>
+                }
+                <br />
             }
-            else
-            {
-                <div>@displayInstruction</div>
-            }
-            <br />
-        }
+        </div>
     </FluentAccordionItem>
 </FluentAccordion>
