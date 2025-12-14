@@ -1,20 +1,20 @@
 <Window xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:nec="clr-namespace:yac8i.gui.sdl;assembly=yac8i.gui.sdl"
-    mc:Ignorable="d" 
-    x:Class="yac8i.gui.sdl.MainWindow" 
+    mc:Ignorable="d"
+    x:Class="yac8i.gui.sdl.MainWindow"
     Title="YAC8I"
     MinWidth="1600"
     Height="600"
     MaxHeight="600"
     MinHeight="600"
-    CanResize="False" 
+    CanResize="False"
     xmlns:local="clr-namespace:yac8i.gui.sdl.MVVM;assembly=yac8i.gui.sdl">
     <Window.Resources>
-        <local:OpcodeToHexConverter x:Key="hexConverter"/>
-        <local:BoolToStringConverter x:Key="boolConverter"/>
+        <local:OpcodeToHexConverter x:Key="hexConverter" />
+        <local:BoolToStringConverter x:Key="boolConverter" />
     </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -25,37 +25,41 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
-            <ColumnDefinition  Width="150" />
-            <ColumnDefinition  Width="100"/>
-            <ColumnDefinition  Width="300"/>
+            <ColumnDefinition Width="150" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="300" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="15">
+        <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2,2,2,0"
+            Padding="5">
             <StackPanel>
-                <Button Content="Load" Command="{Binding LoadCommand}"/>
-                <Button Content="Start/Pause" Command="{Binding StartPauseCommand}"/>
-                <Button Content="Step" Command="{Binding StepCommand}"/>
-                <Button Content="Restart" Command="{Binding RestartCommand}"/>
-                <Button Content="Store" Command="{Binding StoreCommand}"/>
-                <Button Content="Restore" Command="{Binding RestoreCommand}"/>
+                <Button Content="Load" Command="{Binding LoadCommand}" />
+                <Button Content="Start/Pause" Command="{Binding StartPauseCommand}" />
+                <Button Content="Step" Command="{Binding StepCommand}" />
+                <Button Content="Restart" Command="{Binding RestartCommand}" />
+                <Button Content="Store" Command="{Binding StoreCommand}" />
+                <Button Content="Restore" Command="{Binding RestoreCommand}" />
             </StackPanel>
         </Border>
-        <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="5">
+        <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2,2,2,0"
+            Padding="5">
             <DockPanel>
-                <Label Content="Breakpoints" DockPanel.Dock="Top"/>
+                <Label Content="Breakpoints" DockPanel.Dock="Top" />
                 <ListBox DockPanel.Dock="Top"
-                         AutoScrollToSelectedItem="True"
-                         ItemsSource="{Binding Breakpoints}">
+                    AutoScrollToSelectedItem="True"
+                    ItemsSource="{Binding Breakpoints}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid>
-                                <Grid.ColumnDefinitions>    
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                </Grid.ColumnDefinitions>    
-                                <TextBox Grid.Column="0" Text="{Binding Address, Converter={StaticResource hexConverter}}" IsReadOnly="true"/>
-                                <TextBox Grid.Column="1" Text="{Binding Count}" IsReadOnly="true"/>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0"
+                                    Text="{Binding Address, Converter={StaticResource hexConverter}}"
+                                    IsReadOnly="true" />
+                                <TextBox Grid.Column="1" Text="{Binding Count}" IsReadOnly="true" />
                                 <Button Grid.Column="2" Click="OnBreakpointRemove" Content="Delete" />
                             </Grid>
                         </DataTemplate>
@@ -63,63 +67,75 @@
                 </ListBox>
             </DockPanel>
         </Border>
-        <Border Grid.Row ="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="5">
+        <Border Grid.Row="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" Padding="5">
             <StackPanel>
-                <Label Content="Audio devices" DockPanel.Dock="Top"/>
-                <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding SelectedAudioDevice}"/>
+                <Label Content="Audio devices" DockPanel.Dock="Top" />
+                <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding AudioDevices}"
+                    SelectedItem="{Binding SelectedAudioDevice}" />
             </StackPanel>
         </Border>
-        <StackPanel Grid.Row="0" Grid.Column="2">
-            <Label Content="Registers:"/>
-            <ItemsControl ItemsSource="{Binding Registers}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="10" />
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding RegisterId}" FontWeight="Bold" />
-                            <Label Grid.Column="1" Content=":"/>
-                            <TextBlock Grid.Column="2" Text="{Binding RegisterValue}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
-        <StackPanel Grid.Row="0" Grid.Column="3">
-            <Label Content="Hex:" />
-                <ListBox Height="550"
-                         ItemsSource="{Binding Instructions}" 
-                         AutoScrollToSelectedItem="True"
-                         SelectedIndex="{Binding SelectedIndex}">
-                     <ListBox.ItemTemplate>
+        <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="2" BorderBrush="Black"
+            BorderThickness="0,2,0,2">
+            <StackPanel>
+                <Label Content="Registers:" />
+                <ItemsControl ItemsSource="{Binding Registers}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding RegisterId}"
+                                    FontWeight="Bold" />
+                                <Label Grid.Column="1" Content=":" />
+                                <TextBlock Grid.Column="2" Text="{Binding RegisterValue}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        <Border Grid.Row="0" Grid.Column="3" Grid.RowSpan="3" BorderBrush="Black"
+            BorderThickness="2,2,0,2">
+            <DockPanel LastChildFill="True">
+                <Label DockPanel.Dock="Top" Content="Hex:" />
+                <ListBox
+                    ItemsSource="{Binding Instructions}"
+                    AutoScrollToSelectedItem="True"
+                    SelectedIndex="{Binding SelectedIndex}">
+                    <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid PointerPressed="OnNewBreakpointSet">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="20" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding PointsToProgramCounter, Converter={StaticResource boolConverter}, ConverterParameter='>'}"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Address, Converter={StaticResource hexConverter}}"/>
-                                <TextBlock Grid.Column="2" Text=":"/>
-                                <TextBlock Grid.Column="3" Text="{Binding Opcode, Converter={StaticResource hexConverter}}"/>
-                                <TextBlock Grid.Column="6" Text="{Binding Mnemonic}"/>
+                                <TextBlock Grid.Column="0" FontWeight="Bold"
+                                    Text="{Binding PointsToProgramCounter, Converter={StaticResource boolConverter}, ConverterParameter='>'}" />
+                                <TextBlock Grid.Column="1"
+                                    Text="{Binding Address, Converter={StaticResource hexConverter}}" />
+                                <TextBlock Grid.Column="2" Text=":" />
+                                <TextBlock Grid.Column="3"
+                                    Text="{Binding Opcode, Converter={StaticResource hexConverter}}" />
+                                <TextBlock Grid.Column="6" Text="{Binding Mnemonic}" />
                             </Grid>
                         </DataTemplate>
-                     </ListBox.ItemTemplate>
+                    </ListBox.ItemTemplate>
                 </ListBox>
-        </StackPanel>
-        <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Width="1024" Height="512" Name="host" Margin="0 70 0 0" />  
+            </DockPanel>
+        </Border>
+        <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Width="1024"
+            Height="512" Name="host" Margin="0 70 0 0" />
     </Grid>
 </Window>
