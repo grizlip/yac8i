@@ -21,7 +21,6 @@
             <RowDefinition />
             <RowDefinition />
             <RowDefinition />
-            <RowDefinition />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
@@ -45,9 +44,8 @@
             Padding="5">
             <DockPanel>
                 <Label Content="Breakpoints" DockPanel.Dock="Top" />
-                <ListBox DockPanel.Dock="Top"
-                    AutoScrollToSelectedItem="True"
-                    ItemsSource="{Binding Breakpoints}">
+                <ListBox DockPanel.Dock="Top" AutoScrollToSelectedItem="True"
+                    ItemsSource="Binding Breakpoints}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid>
@@ -105,11 +103,12 @@
         <Border Grid.Row="0" Grid.Column="3" Grid.RowSpan="3" BorderBrush="Black"
             BorderThickness="2,2,0,2">
             <DockPanel LastChildFill="True">
-                <Label DockPanel.Dock="Top" Content="Hex:" />
+                <Label DockPanel.Dock="Top" Content="Source:" />
                 <ListBox
                     ItemsSource="{Binding Instructions}"
                     AutoScrollToSelectedItem="True"
-                    SelectedIndex="{Binding SelectedIndex}">
+                    SelectedIndex="{Binding SelectedIndex}"
+                    BorderThickness="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid PointerPressed="OnNewBreakpointSet">
@@ -136,6 +135,6 @@
             </DockPanel>
         </Border>
         <nec:NativeEmbeddingControl Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Width="1024"
-            Height="512" Name="host" Margin="0 70 0 0" />
+            Height="512" Name="host" />
     </Grid>
 </Window>
