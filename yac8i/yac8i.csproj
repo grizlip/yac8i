@@ -9,5 +9,10 @@
  <ItemGroup>
   <InternalsVisibleTo Include="yac8i.tests" />
 </ItemGroup>
+<Target Name="GetTargetPath" Returns="@(_FakeOutputPath)">
+  <ItemGroup>
+    <_FakeOutputPath Include="$(MSBuildProjectDirectory)\$(OutputPath)\$(_InstallerTargetFramework)\$(AssemblyName).dll" />
+  </ItemGroup>
+</Target>
 
 </Project>
