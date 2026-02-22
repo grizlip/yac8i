@@ -51,6 +51,15 @@
         window.getReference = function (dotNetReference) {
             dotNetHelper = dotNetReference;
         };
+        window.scrollToElement = (elementId) => { 
+            const el = document.getElementById(elementId); 
+
+            if (el) { 
+                el.scrollIntoView({ behavior: "smooth", block: "center" });               
+            } 
+            
+        };
+        
         let last
         window.draw = function (timestamp) {
             if (last === undefined) {

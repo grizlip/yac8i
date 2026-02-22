@@ -26,11 +26,11 @@
 
                 if (instruction.Current)
                 {
-                    <div><b>@displayInstruction</b></div>
+                    <div id="instruction-@instruction.Address"><b>@displayInstruction</b></div>
                 }
                 else
                 {
-                    <div>@displayInstruction</div>
+                     <div id="instruction-@instruction.Address">@displayInstruction</div>
                 }
                 <br />
             }

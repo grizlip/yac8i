@@ -86,6 +86,7 @@ namespace yac8i.blazorwasm.Pages
                 vm.UpdateKeyState(key, false);
             }
         }
+        
         public async ValueTask DisposeAsync()
         {
             await DisposeAsyncCore().ConfigureAwait(false);
@@ -226,6 +227,7 @@ namespace yac8i.blazorwasm.Pages
                 }
             }
         }
+
         private void OnProgramLoaded(object? sender, int bytesCount)
         {
             int bytesCountAdjusted = bytesCount + 512;
@@ -242,7 +244,12 @@ namespace yac8i.blazorwasm.Pages
             instructions.Clear();
             foreach (var opcode in opcodes)
             {
-                instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), ProgramCounter == address));
+                bool isCurrent = ProgramCounter == address;
+                instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), isCurrent));
+                if (isCurrent)
+                {
+                    JSInterop!.InvokeVoidAsync("scrollToElement", $"instruction-{address}");
+                }
                 address += 2;
             }
         }
