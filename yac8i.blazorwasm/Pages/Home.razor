@@ -19,6 +19,7 @@
         </FluentStack>
     </FluentAccordionItem>
     <FluentAccordionItem Heading="Source">
+        <FluentCheckbox @bind-Value="@FollowPC" Label="Follow PC" />
         <div style="height: 500px; width: 200px; overflow:auto;">
             @foreach (var instruction in @Instructions)
             {

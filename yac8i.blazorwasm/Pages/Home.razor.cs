@@ -19,6 +19,8 @@ namespace yac8i.blazorwasm.Pages
 
         public IReadOnlyCollection<Instruction> Instructions => instructions;
 
+        public bool FollowPC;
+
         private readonly List<ushort> opcodes = [];
         private readonly byte[] surface = new byte[64 * 32 * 4];//8192
         private readonly List<Instruction> instructions = [];
@@ -246,7 +248,7 @@ namespace yac8i.blazorwasm.Pages
             {
                 bool isCurrent = ProgramCounter == address;
                 instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), isCurrent));
-                if (isCurrent)
+                if (FollowPC && isCurrent)
                 {
                     JSInterop!.InvokeVoidAsync("scrollToElement", $"instruction-{address}");
                 }
