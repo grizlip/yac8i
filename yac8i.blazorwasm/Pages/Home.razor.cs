@@ -19,6 +19,8 @@ namespace yac8i.blazorwasm.Pages
 
         public IReadOnlyCollection<Instruction> Instructions => instructions;
 
+        public bool PauseGoDisabled => !started;
+        public bool StartDisabled => !loaded || (loaded && started);
         public bool FollowPC;
 
         private readonly List<ushort> opcodes = [];
@@ -31,6 +33,10 @@ namespace yac8i.blazorwasm.Pages
         private OscillatorNode? oscillatorNode;
         private GainNode? gainNode;
         private AudioDestinationNode? audioDestinationNode;
+
+        private bool started = false;
+        private bool running = false;
+        private bool loaded = false;
 
         [Inject]
         public IJSRuntime? JSInterop { get; set; }
@@ -88,7 +94,7 @@ namespace yac8i.blazorwasm.Pages
                 vm.UpdateKeyState(key, false);
             }
         }
-        
+
         public async ValueTask DisposeAsync()
         {
             await DisposeAsyncCore().ConfigureAwait(false);
@@ -197,14 +203,39 @@ namespace yac8i.blazorwasm.Pages
             }
         }
 
+        private void OnClickPauseGo()
+        {
+            if (running)
+            {
+                vm.Pause();
+                running = false;
+            }
+            else
+            {
+                vm.Go();
+                running = true;
+            }
+
+        }
+
+        private async Task OnClickStart()
+        {
+            if (loaded)
+            {
+                started = true;
+                running = true;
+                await vm.StartAsync(CancellationToken.None);
+            }
+        }
+
         private async Task LoadFiles(InputFileChangeEventArgs e)
         {
-            Console.WriteLine(e.File.Name);
             vm.StopAndReset();
-            await vm.LoadAsync(e.File.OpenReadStream());
-            await vm.StartAsync(CancellationToken.None);
             opcodes.Clear();
-
+            await vm.LoadAsync(e.File.OpenReadStream());
+            loaded = true;
+            running = false;
+            started = false;
         }
 
         private async void OnBeepStatusChanged(object? sender, bool status)
