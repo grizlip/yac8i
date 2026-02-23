@@ -20,6 +20,7 @@ namespace yac8i.blazorwasm.Pages
         public IReadOnlyCollection<Instruction> Instructions => instructions;
 
         public bool PauseGoDisabled => !started;
+        public bool StepDisabled => !started || running;
         public bool StartDisabled => !loaded || (loaded && started);
         public bool FollowPC;
 
@@ -200,6 +201,14 @@ namespace yac8i.blazorwasm.Pages
 
                 //start animation, when blazor loads
                 await JSInterop!.InvokeVoidAsync("draw");
+            }
+        }
+
+        private void OnClickStep()
+        {
+            if (!running && started)
+            {
+                vm.Step();
             }
         }
 
