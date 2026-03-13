@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using KristofferStrube.Blazor.WebAudio;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -6,8 +7,6 @@ using yac8i.TickTimer;
 
 namespace yac8i.blazorwasm.Pages
 {
-    public record Instruction(ushort Address, string Mnemonic, bool Current);
-
     [System.Runtime.Versioning.SupportedOSPlatform("browser")]
     public partial class Home : IDisposable, IAsyncDisposable
     {
@@ -24,7 +23,6 @@ namespace yac8i.blazorwasm.Pages
         public bool StartDisabled => !loaded || (loaded && started);
         public bool FollowPC;
 
-        private readonly List<ushort> opcodes = [];
         private readonly byte[] surface = new byte[64 * 32 * 4];//8192
         private readonly List<Instruction> instructions = [];
         private readonly JsTickTimer jsTickTimer;
@@ -54,7 +52,17 @@ namespace yac8i.blazorwasm.Pages
         public string OnTick()
         {
             jsTickTimer.Tick();
-            UpdateInstructions();
+
+            foreach (var instruction in instructions)
+            {
+                bool isCurrent = ProgramCounter == instruction.Address;
+                instruction.Current = isCurrent;
+                if (FollowPC && isCurrent)
+                {
+                    JSInterop!.InvokeVoidAsync("scrollToElement", $"instruction-{instruction.Address}");
+                }
+            }
+
             StateHasChanged();
             for (int i = 0; i < vm.Surface.GetLength(0); i++)
             {
@@ -240,7 +248,6 @@ namespace yac8i.blazorwasm.Pages
         private async Task LoadFiles(InputFileChangeEventArgs e)
         {
             vm.StopAndReset();
-            opcodes.Clear();
             await vm.LoadAsync(e.File.OpenReadStream());
             loaded = true;
             running = false;
@@ -273,26 +280,11 @@ namespace yac8i.blazorwasm.Pages
         private void OnProgramLoaded(object? sender, int bytesCount)
         {
             int bytesCountAdjusted = bytesCount + 512;
+
+            instructions.Clear();
             for (uint i = 512; i < bytesCountAdjusted; i += 2)
             {
-                opcodes.Add(vm.GetOpcode(i));
-            }
-            UpdateInstructions();
-        }
-
-        private void UpdateInstructions()
-        {
-            ushort address = 512;
-            instructions.Clear();
-            foreach (var opcode in opcodes)
-            {
-                bool isCurrent = ProgramCounter == address;
-                instructions.Add(new Instruction(address, vm.GetMnemonic(opcode), isCurrent));
-                if (FollowPC && isCurrent)
-                {
-                    JSInterop!.InvokeVoidAsync("scrollToElement", $"instruction-{address}");
-                }
-                address += 2;
+                instructions.Add(new Instruction((ushort)i, vm.GetMnemonic(vm.GetOpcode(i))));
             }
         }
 
