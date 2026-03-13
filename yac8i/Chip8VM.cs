@@ -57,21 +57,22 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
         internal byte delayTimer = 0;
+
         internal byte soundTimer = 0;
+
+        internal  ushort pressedKeys = 0;
+
+        internal int instructionsToExecuteInFrame = 0;        
+
+        internal ushort? lastPressedKey = null;
+
+        internal readonly ITickTimer tickTimer;
 
         private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
-        private readonly ITickTimer tickTimer;
-
         private byte[] loadedProgram = null;
 
-        private int instructionsToExecuteInFrame = 0;
-
         private bool beepStatus = false;
-
-        private ushort pressedKeys = 0;
-
-        private ushort? lastPressedKey = null;
 
         private bool loaded = false;
 
