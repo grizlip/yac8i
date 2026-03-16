@@ -10,15 +10,15 @@ using yac8i.TickTimer;
 
 namespace yac8i
 {
-    public class Chip8VM
+    public class Chip8VM : IChip8VM
     {
         public event EventHandler<int> ProgramLoaded;
 
         public bool[,] Surface => surface;
 
-        public EventHandler<string> NewMessage;
+        public event EventHandler<string> NewMessage;
 
-        public EventHandler<bool> BeepStatus;
+        public event EventHandler<bool> BeepStatus;
 
         public event EventHandler Tick;
 
@@ -60,9 +60,9 @@ namespace yac8i
 
         internal byte soundTimer = 0;
 
-        internal  ushort pressedKeys = 0;
+        internal ushort pressedKeys = 0;
 
-        internal int instructionsToExecuteInFrame = 0;        
+        internal int instructionsToExecuteInFrame = 0;
 
         internal ushort? lastPressedKey = null;
 
