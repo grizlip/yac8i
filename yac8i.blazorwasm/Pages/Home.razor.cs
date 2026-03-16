@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using KristofferStrube.Blazor.WebAudio;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -23,10 +22,16 @@ namespace yac8i.blazorwasm.Pages
         public bool StartDisabled => !loaded || (loaded && started);
         public bool FollowPC;
 
+        [Inject]
+        public required ITickTimer tickTimer { get; set; }
+        [Inject]
+        public required IChip8VM vm { get; set; }
+        [Inject]
+        public required IJSRuntime JSInterop { get; set; }
+
         private readonly byte[] surface = new byte[64 * 32 * 4];//8192
         private readonly List<Instruction> instructions = [];
-        private readonly JsTickTimer jsTickTimer;
-        private readonly Chip8VM vm;
+        private JsTickTimer jsTickTimer => tickTimer as JsTickTimer ?? throw new ArgumentException(nameof(jsTickTimer));
         private DotNetObjectReference<Home>? objRef;
         private AudioContext? audioContext;
         private OscillatorNode? oscillatorNode;
@@ -36,17 +41,6 @@ namespace yac8i.blazorwasm.Pages
         private bool started = false;
         private bool running = false;
         private bool loaded = false;
-
-        [Inject]
-        public IJSRuntime? JSInterop { get; set; }
-
-        public Home()
-        {
-            jsTickTimer = new();
-            vm = new(jsTickTimer);
-            vm.ProgramLoaded += OnProgramLoaded;
-            vm.BeepStatus += OnBeepStatusChanged;
-        }
 
         [JSInvokable]
         public string OnTick()
@@ -59,7 +53,7 @@ namespace yac8i.blazorwasm.Pages
                 instruction.Current = isCurrent;
                 if (FollowPC && isCurrent)
                 {
-                    JSInterop!.InvokeVoidAsync("scrollToElement", $"instruction-{instruction.Address}");
+                    JSInterop.InvokeVoidAsync("scrollToElement", $"instruction-{instruction.Address}");
                 }
             }
 
@@ -188,16 +182,18 @@ namespace yac8i.blazorwasm.Pages
         {
             if (firstRender)
             {
+                vm.ProgramLoaded += OnProgramLoaded;
+                vm.BeepStatus += OnBeepStatusChanged;
                 vm.NewMessage += (sender, message) =>
                   {
                       Console.WriteLine(message);
                   };
                 objRef = DotNetObjectReference.Create(this);
-                await JSInterop!.InvokeVoidAsync("getReference", objRef);
+                await JSInterop.InvokeVoidAsync("getReference", objRef);
 
-                audioContext = await AudioContext.CreateAsync(JSInterop!);
+                audioContext = await AudioContext.CreateAsync(JSInterop);
 
-                gainNode = await GainNode.CreateAsync(JSInterop!, audioContext, new()
+                gainNode = await GainNode.CreateAsync(JSInterop, audioContext, new()
                 {
                     Gain = 0.1f
                 });
@@ -208,7 +204,7 @@ namespace yac8i.blazorwasm.Pages
 
 
                 //start animation, when blazor loads
-                await JSInterop!.InvokeVoidAsync("draw");
+                await JSInterop.InvokeVoidAsync("draw");
             }
         }
 
@@ -258,7 +254,7 @@ namespace yac8i.blazorwasm.Pages
         {
             if (status)
             {
-                oscillatorNode = await OscillatorNode.CreateAsync(JSInterop!, audioContext!, new()
+                oscillatorNode = await OscillatorNode.CreateAsync(JSInterop, audioContext!, new()
                 {
                     Type = OscillatorType.Sine,
                     Frequency = 440,
@@ -307,28 +303,5 @@ namespace yac8i.blazorwasm.Pages
                 {"c",0xB},
                 {"v",0xF},
             };
-
-        private class JsTickTimer : ITickTimer
-        {
-            public event EventHandler<TickTimerElapsedEventArgs>? Elapsed;
-            public float Interval { get; set; } = 1;
-            public bool IsRunning { get; private set; }
-            public void Start()
-            {
-                IsRunning = true;
-            }
-            public void Stop(bool joinThread = true)
-            {
-                IsRunning = false;
-            }
-
-            public void Tick()
-            {
-                if (IsRunning)
-                {
-                    Elapsed?.Invoke(this, new TickTimerElapsedEventArgs(0));
-                }
-            }
-        }
     }
 }

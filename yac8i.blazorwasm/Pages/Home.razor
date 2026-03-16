@@ -18,9 +18,7 @@
             @for (int i = 0; i < @Registers.Length; i++)
             {
                 int registerValue = @Registers[i];
-                int localI = i + 1;
-
-                <p>@localI:@string.Format("0x{0}",@registerValue.ToString("x2"))</p>
+                <p>@(i + 1):@string.Format("0x{0}",@registerValue.ToString("x2"))</p>
             }
         </FluentStack>
     </FluentAccordionItem>
