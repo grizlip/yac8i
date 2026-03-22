@@ -13,7 +13,7 @@ namespace yac8i.blazorwasm.Pages
 
         public ushort IRegister => vm?.IRegister ?? 0;
 
-        public byte[] Registers => vm?.Registers.ToArray() ?? [];
+        public byte[] Registers => vm?.Registers?.ToArray() ?? [];
 
         public IReadOnlyCollection<Instruction> Instructions => instructions;
 
