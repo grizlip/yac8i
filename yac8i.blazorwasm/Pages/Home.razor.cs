@@ -38,9 +38,9 @@ namespace yac8i.blazorwasm.Pages
         private GainNode? gainNode;
         private AudioDestinationNode? audioDestinationNode;
 
-        private bool started = false;
-        private bool running = false;
-        private bool loaded = false;
+        internal bool started = false;
+        internal bool running = false;
+        internal bool loaded = false;
 
         [JSInvokable]
         public string OnTick()
