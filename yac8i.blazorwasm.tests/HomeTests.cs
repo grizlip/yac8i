@@ -58,9 +58,7 @@ namespace yac8i.blazorwasm.tests
             cut.Instance.loaded = true;
             cut.Render();
 
-            var buttons = cut.FindComponents<FluentButton>();
-
-            var domButton = buttons[0].Find("fluent-button");
+            var domButton = cut.FindComponents<FluentButton>().Single(item=> item.Instance.Id=="startButton").Find("fluent-button");
             domButton.Click();
 
             vmMock.Verify(m => m.StartAsync(CancellationToken.None), Times.Once);

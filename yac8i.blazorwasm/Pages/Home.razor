@@ -3,9 +3,9 @@
 <FluentStack Orientation="Orientation.Vertical">
     <InputFile OnChange="LoadFiles" multiple />
     <FluentStack>
-        <FluentButton OnClick="OnClickStart" Disabled="StartDisabled">Start</FluentButton>
-        <FluentButton OnClick="OnClickPauseGo" Disabled="PauseGoDisabled">Pause/Go</FluentButton>
-        <FluentButton OnClick="OnClickStep" Disabled="StepDisabled">Step</FluentButton>
+        <FluentButton id="startButton"  OnClick="OnClickStart" Disabled="StartDisabled">Start</FluentButton>
+        <FluentButton id="pauseGoButton" OnClick="OnClickPauseGo" Disabled="PauseGoDisabled">Pause/Go</FluentButton>
+        <FluentButton id="stepButton" OnClick="OnClickStep" Disabled="StepDisabled">Step</FluentButton>
     </FluentStack>
 </FluentStack>
 <FluentAccordion>
