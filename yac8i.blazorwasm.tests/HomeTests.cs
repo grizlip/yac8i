@@ -48,6 +48,50 @@ namespace yac8i.blazorwasm.tests
             testContext.Dispose();
         }
 
+        [TestCase(false, false, true, true, false, false)]
+        public void Buttons_Test(bool started, bool running, bool loaded, bool startEnabled, bool pauseGoEnabled, bool stepEnabled)
+        {
+
+            bool startClicked = false;
+            bool pauseGoClicked = false;
+            bool stepClicked = false;
+#pragma warning disable CA1416
+            var cut = testContext.Render<Home>();
+#pragma warning disable CA1416
+            cut.Instance.started = started;
+            cut.Instance.running = running;
+            cut.Instance.loaded = loaded;
+            cut.Render();
+            
+            var buttons = cut.FindComponents<FluentButton>();
+            var startButton = buttons.Single(item => item.Instance.Id == "startButton");
+            startButton.Render(parameters =>
+            {
+                parameters.Add(p => p.OnClick, (e) => { startClicked = true; });
+            });
+            var pauseGoButton = buttons.Single(item => item.Instance.Id == "pauseGoButton");
+            pauseGoButton.Render(parameters =>
+            {
+                parameters.Add(p => p.OnClick, (e) => { pauseGoClicked = true; });
+            });
+            var stepButton = buttons.Single(item => item.Instance.Id == "stepButton");
+            stepButton.Render(parameters =>
+            {
+                parameters.Add(p => p.OnClick, (e) => { stepClicked = true; });
+            });
+
+            startButton.Find("fluent-button").Click();
+            pauseGoButton.Find("fluent-button").Click();
+            stepButton.Find("fluent-button").Click();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(startClicked, Is.EqualTo(startEnabled));
+                Assert.That(pauseGoClicked, Is.EqualTo(pauseGoEnabled));
+                Assert.That(stepClicked, Is.EqualTo(stepEnabled));
+            }
+        }
+
         [Test]
         public void ProgramLoaded_StartButtonClicked_ProgramStarts()
         {
@@ -58,8 +102,8 @@ namespace yac8i.blazorwasm.tests
             cut.Instance.loaded = true;
             cut.Render();
 
-            var domButton = cut.FindComponents<FluentButton>().Single(item=> item.Instance.Id=="startButton").Find("fluent-button");
-            domButton.Click();
+            var startButton = cut.FindComponents<FluentButton>().Single(item => item.Instance.Id == "startButton").Find("fluent-button");
+            startButton.Click();
 
             vmMock.Verify(m => m.StartAsync(CancellationToken.None), Times.Once);
 
