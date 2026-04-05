@@ -48,10 +48,11 @@ namespace yac8i.blazorwasm.tests
             testContext.Dispose();
         }
 
+        [TestCase(true, true, true, false, true, false)]
         [TestCase(false, false, true, true, false, false)]
+        [TestCase(true, false, true, false, true, true)]
         public void Buttons_Test(bool started, bool running, bool loaded, bool startEnabled, bool pauseGoEnabled, bool stepEnabled)
         {
-
             bool startClicked = false;
             bool pauseGoClicked = false;
             bool stepClicked = false;
@@ -62,7 +63,7 @@ namespace yac8i.blazorwasm.tests
             cut.Instance.running = running;
             cut.Instance.loaded = loaded;
             cut.Render();
-            
+
             var buttons = cut.FindComponents<FluentButton>();
             var startButton = buttons.Single(item => item.Instance.Id == "startButton");
             startButton.Render(parameters =>
