@@ -175,6 +175,47 @@ namespace yac8i.blazorwasm.tests
             }
         }
 
+        [Test]
+        public void ProgramLoadedEvent_ProperInstructionsView()
+        {
+            int instructionsId = 0;
+            vmMock.Setup(m => m.GetMnemonic(It.IsAny<ushort>()))
+                  .Returns(() => $"{instructionsId++}");
+
+            vmMock.Setup(m => m.LoadAsync(It.IsAny<Stream>()))
+                  .Returns(Task.CompletedTask)
+                  .Raises(e => e.ProgramLoaded += null, this, 6);
+
+#pragma warning disable CA1416
+            var cut = testContext.Render<Home>();
+#pragma warning disable CA1416
+
+            var inputFileComponent = cut.FindComponent<InputFile>();
+            string dummyProgram = "Very dummy program...";
+            var fileToUpload = InputFileContent.CreateFromText(dummyProgram, "test.txt");
+            inputFileComponent.UploadFiles(fileToUpload);
+
+            var instructions = cut.FindComponents<FluentAccordionItem>()
+                                  .Single(item => item.Instance.Heading == "Source")
+                                  .FindAll("div")
+                                  .Where(item => item?.Id?.StartsWith("instruction-") ?? false)
+                                  .Select(item => (item.Id, item.InnerHtml))
+                                  .ToArray();
+
+
+            Assert.That(instructions, Has.Length.EqualTo(3));
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(instructions[0].Id, Is.EqualTo("instruction-512"));
+                Assert.That(instructions[1].Id, Is.EqualTo("instruction-514"));
+                Assert.That(instructions[2].Id, Is.EqualTo("instruction-516"));
+
+                Assert.That(instructions[0].InnerHtml, Is.EqualTo("512 :: 0"));
+                Assert.That(instructions[1].InnerHtml, Is.EqualTo("514 :: 1"));
+                Assert.That(instructions[2].InnerHtml, Is.EqualTo("516 :: 2"));
+            }
+        }
+
         private static bool CompareStreamContentsToString(Stream streamValue, string stringValue)
         {
             using StreamReader sr = new(streamValue);
