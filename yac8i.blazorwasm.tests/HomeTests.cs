@@ -216,6 +216,30 @@ namespace yac8i.blazorwasm.tests
             }
         }
 
+        [Test]
+        public void RegistersChanged_RegisterRendered()
+        {
+            vmMock.Setup(m => m.Registers).Returns(() => new byte[] { 0xAB, 0xCD, 0xEF });
+            vmMock.Setup(m => m.IRegister).Returns(() => 0xFFFF);
+#pragma warning disable CA1416
+            var cut = testContext.Render<Home>();
+#pragma warning disable CA1416
+
+            var registers = cut.FindComponents<FluentAccordionItem>()
+                                              .Single(item => item.Instance.Heading == "Registers")
+                                              .FindAll("p")
+                                              .ToArray();
+
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(registers, Has.Length.EqualTo(4));
+                Assert.That(registers.Count(r => r.InnerHtml.Contains("0xab")), Is.EqualTo(1));
+                Assert.That(registers.Count(r => r.InnerHtml.Contains("0xcd")), Is.EqualTo(1));
+                Assert.That(registers.Count(r => r.InnerHtml.Contains("0xef")), Is.EqualTo(1));
+                Assert.That(registers.Count(r => r.InnerHtml.Contains("0xffff")), Is.EqualTo(1));
+            }
+        }
+
         private static bool CompareStreamContentsToString(Stream streamValue, string stringValue)
         {
             using StreamReader sr = new(streamValue);
