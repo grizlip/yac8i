@@ -41,13 +41,13 @@ namespace yac8i.tests
         [Test]
         public void GetOpcode_ValidAndInvalid()
         {
-            // put some bytes in memory at address 0
-            vm.memory[0] = 0x12;
-            vm.memory[1] = 0x34;
+            // put some bytes in state.Memory at address 0
+            vm.state.Memory[0] = 0x12;
+            vm.state.Memory[1] = 0x34;
             ushort code = vm.GetOpcode(0);
             Assert.That(code, Is.EqualTo(0x1234));
 
-            Assert.Throws<ArgumentException>(() => vm.GetOpcode((uint)vm.memory.Length));
+            Assert.Throws<ArgumentException>(() => vm.GetOpcode((uint)vm.state.Memory.Length));
         }
 
         [Test]
@@ -81,8 +81,8 @@ namespace yac8i.tests
             await vm.LoadAsync(ms);
 
             // modify some state
-            vm.registers[1] = 0x42;
-            vm.IRegister = 0x123;
+            vm.state.Registers[1] = 0x42;
+            vm.state.IRegister = 0x123;
 
             string file = Path.GetTempFileName();
             try
@@ -90,15 +90,15 @@ namespace yac8i.tests
                 Assert.That(vm.TryStore(file), Is.True);
 
                 // change state
-                vm.registers[1] = 0;
-                vm.IRegister = 0;
+                vm.state.Registers[1] = 0;
+                vm.state.IRegister = 0;
 
                 using (Assert.EnterMultipleScope())
                 {
                     // restore from same program file - should succeed
                     Assert.That(vm.TryRestore(file), Is.True);
-                    Assert.That(vm.registers[1], Is.EqualTo(0x42));
-                    Assert.That(vm.IRegister, Is.EqualTo(0x123));
+                    Assert.That(vm.state.Registers[1], Is.EqualTo(0x42));
+                    Assert.That(vm.state.IRegister, Is.EqualTo(0x123));
                 }
 
                 // load different program then try to restore again -> mismatch
@@ -155,8 +155,8 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(loadedCount, Is.EqualTo(2));
-                // verify that memory copy occurred (first byte after 512)
-                Assert.That(vm.memory[512], Is.EqualTo(0x01));
+                // verify that state.Memory copy occurred (first byte after 512)
+                Assert.That(vm.state.Memory[512], Is.EqualTo(0x01));
             }
         }
 
@@ -165,16 +165,16 @@ namespace yac8i.tests
         public void Step_ExecutesPendingInstructionAndUpdatesTimers()
         {
             // make CLS at program counter
-            vm.memory[0x200] = 0x00;
-            vm.memory[0x201] = 0xE0;
+            vm.state.Memory[0x200] = 0x00;
+            vm.state.Memory[0x201] = 0xE0;
             // set pending count to 1
             vm.instructionsToExecuteInFrame = 1;
             vm.Step();
             Assert.That(vm.ProgramCounter, Is.EqualTo((ushort)0x202));
 
             // set timers and check beep event
-            vm.delayTimer = 2;
-            vm.soundTimer = 1;
+            vm.state.DelayTimer = 2;
+            vm.state.SoundTimer = 1;
             bool beeped = false;
             var beepSignal = new System.Threading.ManualResetEventSlim(false);
             vm.BeepStatus += (_, status) => { beeped = status; beepSignal.Set(); };
@@ -184,8 +184,8 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(beepSignal.Wait(200), Is.True, "beep event not received");
-                Assert.That(vm.delayTimer, Is.EqualTo((byte)1));
-                Assert.That(vm.soundTimer, Is.Zero);
+                Assert.That(vm.state.DelayTimer, Is.EqualTo((byte)1));
+                Assert.That(vm.state.SoundTimer, Is.Zero);
                 Assert.That(beeped, Is.True);
             }
         }
@@ -194,13 +194,13 @@ namespace yac8i.tests
         public void UpdateKeyState_ChangesInternalFlags()
         {
             vm.UpdateKeyState(3, true);
-            Assert.That(vm.pressedKeys & (1 << 3), Is.Not.Zero);
+            Assert.That(vm.state.PressedKeys & (1 << 3), Is.Not.Zero);
 
             vm.UpdateKeyState(3, false);
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(vm.pressedKeys & (1 << 3), Is.Zero);
-                Assert.That(vm.lastPressedKey, Is.EqualTo((ushort)3));
+                Assert.That(vm.state.PressedKeys & (1 << 3), Is.Zero);
+                Assert.That(vm.state.LastPressedKey, Is.EqualTo((ushort)3));
             }
         }
 
@@ -213,12 +213,12 @@ namespace yac8i.tests
             Assert.That(vm.tickTimer.IsRunning, Is.False);
 
             // modify memory/registers and reset
-            vm.registers[0] = 99;
+            vm.state.Registers[0] = 99;
             vm.Surface[1, 1] = true;
             vm.StopAndReset();
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(vm.registers.All(r => r == 0), Is.True);
+                Assert.That(vm.state.Registers.All(r => r == 0), Is.True);
                 Assert.That(vm.Surface[1, 1], Is.False);
                 Assert.That(vm.ProgramCounter, Is.EqualTo((ushort)0x200));
             }

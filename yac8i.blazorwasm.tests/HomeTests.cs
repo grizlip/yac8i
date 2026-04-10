@@ -246,6 +246,5 @@ namespace yac8i.blazorwasm.tests
             var str = sr.ReadToEnd();
             return str.Equals(stringValue);
         }
-
     }
 }

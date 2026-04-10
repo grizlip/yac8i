@@ -21,7 +21,7 @@ namespace yac8i.tests
             bool shouldIncrementPC = ExecuteSingleInstruction(0x00E0, 0);
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(vm.Surface[0, 0], Is.EqualTo(false));
+                Assert.That(vm.Surface[0, 0], Is.False);
                 Assert.That(shouldIncrementPC, Is.True);
             }
         }
@@ -39,7 +39,7 @@ namespace yac8i.tests
         [Test]
         public void TestRETCorrect()
         {
-            vm.stack.Push(0xFFFF);
+            vm.state.Stack.Push(0xFFFF);
             bool shouldIncrementPC = ExecuteSingleInstruction(0x00EE, 100);
             using (Assert.EnterMultipleScope())
             {
@@ -66,7 +66,7 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(vm.ProgramCounter, Is.EqualTo(0x0FFF));
-                Assert.That(vm.stack.Peek(), Is.EqualTo(514));
+                Assert.That(vm.state.Stack.Peek(), Is.EqualTo(514));
                 Assert.That(shouldIncrementPC, Is.False);
             }
         }
@@ -85,7 +85,7 @@ namespace yac8i.tests
         [Test]
         public void TestSEJump()
         {
-            vm.registers[0xF] = 0xFF;
+            vm.state.Registers[0xF] = 0xFF;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x3000, 0xFFFF);
             using (Assert.EnterMultipleScope())
             {
@@ -108,7 +108,7 @@ namespace yac8i.tests
         [Test]
         public void TestSNEJump()
         {
-            vm.registers[0xF] = 0xFF;
+            vm.state.Registers[0xF] = 0xFF;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x4000, 0xFFFF);
             using (Assert.EnterMultipleScope())
             {
@@ -120,7 +120,7 @@ namespace yac8i.tests
         [Test]
         public void TestSERegisterNoJump()
         {
-            vm.registers[0xF] = 1;
+            vm.state.Registers[0xF] = 1;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x5000, 0xFFAF);
             using (Assert.EnterMultipleScope())
             {
@@ -132,8 +132,8 @@ namespace yac8i.tests
         [Test]
         public void TestSERegisterJump()
         {
-            vm.registers[0xF] = 0xFF;
-            vm.registers[0xA] = 0xFF;
+            vm.state.Registers[0xF] = 0xFF;
+            vm.state.Registers[0xA] = 0xFF;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x5000, 0xFFAF);
             using (Assert.EnterMultipleScope())
             {
@@ -149,391 +149,391 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0xAF));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0xAF));
             }
         }
 
         [Test]
         public void TestLDRegister()
         {
-            vm.registers[0] = 100;
-            vm.registers[0xF] = 200;
+            vm.state.Registers[0] = 100;
+            vm.state.Registers[0xF] = 200;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8000, 0xFF0F);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(100));
-                Assert.That(vm.registers[0], Is.EqualTo(100));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(100));
+                Assert.That(vm.state.Registers[0], Is.EqualTo(100));
             }
         }
 
         [Test]
         public void TestADDNoOverflow()
         {
-            vm.registers[0xF] = 10;
+            vm.state.Registers[0xF] = 10;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x7000, 0x0F01);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(11));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(11));
             }
         }
 
         [Test]
         public void TestADDOverflow()
         {
-            vm.registers[0xF] = byte.MaxValue;
+            vm.state.Registers[0xF] = byte.MaxValue;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x7000, 0x0F02);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
             }
         }
 
         [Test]
         public void TestOR()
         {
-            vm.registers[0xF] = 0b11110000;
-            vm.registers[1] = 0b00001111;
+            vm.state.Registers[0xF] = 0b11110000;
+            vm.state.Registers[1] = 0b00001111;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8001, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0b11111111));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00001111));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0b11111111));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00001111));
             }
         }
 
         [Test]
         public void TestAND()
         {
-            vm.registers[0xF] = 0b11111000;
-            vm.registers[1] = 0b00011111;
+            vm.state.Registers[0xF] = 0b11111000;
+            vm.state.Registers[1] = 0b00011111;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8002, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0b00011000));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00011111));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0b00011000));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00011111));
             }
         }
 
         [Test]
         public void TestXOR()
         {
-            vm.registers[0xF] = 0b11111000;
-            vm.registers[1] = 0b00011111;
+            vm.state.Registers[0xF] = 0b11111000;
+            vm.state.Registers[1] = 0b00011111;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8003, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0b11100111));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00011111));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0b11100111));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00011111));
             }
         }
 
         [Test]
         public void TestADDRegistersFRegisterNoOverflow()
         {
-            vm.registers[0xF] = 100;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xF] = 100;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8004, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestADDRegistersFRegisterOverflow()
         {
-            vm.registers[0xF] = 255;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xF] = 255;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8004, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestADDRegistersOtherRegisterOverflow()
         {
-            vm.registers[0xA] = 255;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xA] = 255;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8004, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[0xA], Is.EqualTo(49));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(49));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestADDRegistersOtherRegisterNoOverflow()
         {
-            vm.registers[0xA] = 100;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xA] = 100;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8004, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[0xA], Is.EqualTo(150));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(150));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestSUBRegistersFRegisterNoUnderflow()
         {
-            vm.registers[0xF] = 100;
-            vm.registers[1] = 10;
+            vm.state.Registers[0xF] = 100;
+            vm.state.Registers[1] = 10;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8005, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[1], Is.EqualTo(10));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(10));
             }
         }
 
         [Test]
         public void TestSUBRegistersFRegisterUnderflow()
         {
-            vm.registers[0xF] = 20;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xF] = 20;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8005, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestSUBRegistersOtherRegisterUnderflow()
         {
-            vm.registers[0xA] = 20;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xA] = 20;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8005, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[0xA], Is.EqualTo(226));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(226));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestSUBRegistersOtherRegisterNoUnderflow()
         {
-            vm.registers[0xA] = 100;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xA] = 100;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8005, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[0xA], Is.EqualTo(50));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestSHR()
         {
-            vm.registers[0xA] = 0b11111111;
-            vm.registers[1] = 0b00000010;
+            vm.state.Registers[0xA] = 0b11111111;
+            vm.state.Registers[1] = 0b00000010;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8006, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[0xA], Is.EqualTo(1));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00000010));
             }
         }
 
         [Test]
         public void TestSHRCarry()
         {
-            vm.registers[0xA] = 0b11111111;
-            vm.registers[1] = 0b00000001;
+            vm.state.Registers[0xA] = 0b11111111;
+            vm.state.Registers[1] = 0b00000001;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8006, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[0xA], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00000001));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00000001));
             }
         }
 
         [Test]
         public void TestSHRRegisterFCarry()
         {
-            vm.registers[0xF] = 0b11111111;
-            vm.registers[1] = 0b00000001;
+            vm.state.Registers[0xF] = 0b11111111;
+            vm.state.Registers[1] = 0b00000001;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8006, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00000001));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00000001));
             }
         }
 
         [Test]
         public void TestSHRRegisterF()
         {
-            vm.registers[0xF] = 0b11111111;
-            vm.registers[1] = 0b00000010;
+            vm.state.Registers[0xF] = 0b11111111;
+            vm.state.Registers[1] = 0b00000010;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8006, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00000010));
             }
         }
 
         [Test]
         public void TestSUBNRegistersFRegisterNoUnderflow()
         {
-            vm.registers[0xF] = 10;
-            vm.registers[1] = 100;
+            vm.state.Registers[0xF] = 10;
+            vm.state.Registers[1] = 100;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8007, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[1], Is.EqualTo(100));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(100));
             }
         }
 
         [Test]
         public void TestSUBNRegistersFRegisterUnderflow()
         {
-            vm.registers[0xF] = 50;
-            vm.registers[1] = 20;
+            vm.state.Registers[0xF] = 50;
+            vm.state.Registers[1] = 20;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8007, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(20));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(20));
             }
         }
 
         [Test]
         public void TestSUBNRegistersOtherRegisterNoUnderflow()
         {
-            vm.registers[0xA] = 20;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xA] = 20;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8007, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[0xA], Is.EqualTo(30));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(30));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestSUBNRegistersOtherRegisterUnderflow()
         {
-            vm.registers[0xA] = 100;
-            vm.registers[1] = 50;
+            vm.state.Registers[0xA] = 100;
+            vm.state.Registers[1] = 50;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x8007, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[0xA], Is.EqualTo(206));
-                Assert.That(vm.registers[1], Is.EqualTo(50));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(206));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(50));
             }
         }
 
         [Test]
         public void TestSHL()
         {
-            vm.registers[0xA] = 0b11111111;
-            vm.registers[1] = 0b00000010;
+            vm.state.Registers[0xA] = 0b11111111;
+            vm.state.Registers[1] = 0b00000010;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x800E, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[0xA], Is.EqualTo(0b00000100));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(0b00000100));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00000010));
             }
         }
 
         [Test]
         public void TestSHLCarry()
         {
-            vm.registers[0xA] = 0b11111111;
-            vm.registers[1] = 0b10000000;
+            vm.state.Registers[0xA] = 0b11111111;
+            vm.state.Registers[1] = 0b10000000;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x800E, 0x0A10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[0xA], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(0b10000000));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xA], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b10000000));
             }
         }
 
         [Test]
         public void TestSHLRegisterFCarry()
         {
-            vm.registers[0xF] = 0b11111111;
-            vm.registers[1] = 0b10000000;
+            vm.state.Registers[0xF] = 0b11111111;
+            vm.state.Registers[1] = 0b10000000;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x800E, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
-                Assert.That(vm.registers[1], Is.EqualTo(0b10000000));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b10000000));
             }
         }
 
         [Test]
         public void TestSHLRegisterF()
         {
-            vm.registers[0xF] = 0b11111111;
-            vm.registers[1] = 0b00000010;
+            vm.state.Registers[0xF] = 0b11111111;
+            vm.state.Registers[1] = 0b00000010;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x800E, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
-                Assert.That(vm.registers[1], Is.EqualTo(0b00000010));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0b00000010));
             }
         }
 
         [Test]
         public void TestSNERegistersJump()
         {
-            vm.registers[0xF] = 0xAA;
-            vm.registers[1] = 0xBB;
+            vm.state.Registers[0xF] = 0xAA;
+            vm.state.Registers[1] = 0xBB;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x9000, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.False);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0xAA));
-                Assert.That(vm.registers[1], Is.EqualTo(0xBB));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0xAA));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0xBB));
                 Assert.That(vm.ProgramCounter, Is.EqualTo(516));
             }
         }
@@ -541,14 +541,14 @@ namespace yac8i.tests
         [Test]
         public void TestSNERegistersNoJump()
         {
-            vm.registers[0xF] = 0xAA;
-            vm.registers[1] = 0xAA;
+            vm.state.Registers[0xF] = 0xAA;
+            vm.state.Registers[1] = 0xAA;
             bool shouldIncrementPC = ExecuteSingleInstruction(0x9000, 0x0F10);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[0xF], Is.EqualTo(0xAA));
-                Assert.That(vm.registers[1], Is.EqualTo(0xAA));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0xAA));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(0xAA));
                 Assert.That(vm.ProgramCounter, Is.EqualTo(512));
             }
         }
@@ -560,14 +560,14 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.IRegister, Is.EqualTo(0x0ABC));
+                Assert.That(vm.state.IRegister, Is.EqualTo(0x0ABC));
             }
         }
 
         [Test]
         public void TestJPOffset()
         {
-            vm.registers[0] = 0x000F;
+            vm.state.Registers[0] = 0x000F;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xB000, 0x0ABC);
             using (Assert.EnterMultipleScope())
             {
@@ -584,7 +584,7 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[1], Is.AtMost(0x000F));
+                Assert.That(vm.state.Registers[1], Is.AtMost(0x000F));
             }
         }
 
@@ -596,15 +596,15 @@ namespace yac8i.tests
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[1], Is.AtMost(0x00FF));
+                Assert.That(vm.state.Registers[1], Is.AtMost(0x00FF));
             }
         }
 
         [Test]
         public void TestDRWSimple()
         {
-            vm.memory[StartOfFreeMemory + 1] = 0xff;
-            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            vm.state.Memory[StartOfFreeMemory + 1] = 0xff;
+            vm.state.IRegister = (ushort)(StartOfFreeMemory + 1);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xD000, 0x01FF);
             using (Assert.EnterMultipleScope())
             {
@@ -613,15 +613,15 @@ namespace yac8i.tests
                 {
                     Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
                 }
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
             }
         }
 
         [Test]
         public void TestDRWXOR()
         {
-            vm.memory[StartOfFreeMemory + 1] = 0xff;
-            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            vm.state.Memory[StartOfFreeMemory + 1] = 0xff;
+            vm.state.IRegister = (ushort)(StartOfFreeMemory + 1);
             vm.Surface[0, 0] = true;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xD000, 0x01FF);
             using (Assert.EnterMultipleScope())
@@ -632,16 +632,16 @@ namespace yac8i.tests
                 {
                     Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
                 }
-                Assert.That(vm.registers[0xF], Is.EqualTo(1));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(1));
             }
         }
 
         [Test]
         public void TestDRWSpriteOverflow()
         {
-            vm.registers[1] = 64;
-            vm.memory[StartOfFreeMemory + 1] = 0xff;
-            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            vm.state.Registers[1] = 64;
+            vm.state.Memory[StartOfFreeMemory + 1] = 0xff;
+            vm.state.IRegister = (ushort)(StartOfFreeMemory + 1);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xD000, 0x01FF);
             using (Assert.EnterMultipleScope())
             {
@@ -650,16 +650,16 @@ namespace yac8i.tests
                 {
                     Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
                 }
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
             }
         }
 
         [Test]
         public void TestDRWSpriteClipped()
         {
-            vm.registers[1] = 62;
-            vm.memory[StartOfFreeMemory + 1] = 0xff;
-            vm.IRegister = (ushort)(StartOfFreeMemory + 1);
+            vm.state.Registers[1] = 62;
+            vm.state.Memory[StartOfFreeMemory + 1] = 0xff;
+            vm.state.IRegister = (ushort)(StartOfFreeMemory + 1);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xD000, 0x01FF);
             using (Assert.EnterMultipleScope())
             {
@@ -672,7 +672,7 @@ namespace yac8i.tests
                 {
                     Assert.That(vm.Surface[spriteBitIndex, 0], Is.EqualTo(true));
                 }
-                Assert.That(vm.registers[0xF], Is.EqualTo(0));
+                Assert.That(vm.state.Registers[0xF], Is.EqualTo(0));
             }
         }
 
@@ -690,7 +690,7 @@ namespace yac8i.tests
         [Test]
         public void TestSKPPress()
         {
-            vm.registers[1] = 1;
+            vm.state.Registers[1] = 1;
             vm.UpdateKeyState(1, true);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xE09E, 0x0100);
             using (Assert.EnterMultipleScope())
@@ -703,7 +703,7 @@ namespace yac8i.tests
         [Test]
         public void TestSKPThrows()
         {
-            vm.registers[1] = 100;
+            vm.state.Registers[1] = 100;
             Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(0xE09E, 0x0100));
         }
 
@@ -721,7 +721,7 @@ namespace yac8i.tests
         [Test]
         public void TestSKPNPress()
         {
-            vm.registers[1] = 1;
+            vm.state.Registers[1] = 1;
             vm.UpdateKeyState(1, true);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xE0A1, 0x0100);
             using (Assert.EnterMultipleScope())
@@ -734,31 +734,31 @@ namespace yac8i.tests
         [Test]
         public void TestSKPNThrows()
         {
-            vm.registers[1] = 100;
+            vm.state.Registers[1] = 100;
             Assert.Throws<ArgumentException>(() => ExecuteSingleInstruction(0xE0A1, 0x0100));
         }
 
         [Test]
         public void TestLDTimerRead()
         {
-            vm.delayTimer = 100;
+            vm.state.DelayTimer = 100;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF007, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.True);
-                Assert.That(vm.registers[1], Is.EqualTo(100));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(100));
             }
         }
 
         [Test]
         public void TestLDKeyNoPress()
         {
-            vm.registers[1] = 200;
+            vm.state.Registers[1] = 200;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF00A, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.EqualTo(false));
-                Assert.That(vm.registers[1], Is.EqualTo(200));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(200));
                 Assert.That(vm.ProgramCounter, Is.EqualTo(512));
             }
         }
@@ -766,14 +766,14 @@ namespace yac8i.tests
         [Test]
         public void TestLDKeyPress()
         {
-            vm.registers[1] = 200;
+            vm.state.Registers[1] = 200;
             vm.UpdateKeyState(2, true);
             vm.UpdateKeyState(2, false);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF00A, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.EqualTo(false));
-                Assert.That(vm.registers[1], Is.EqualTo(2));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(2));
                 Assert.That(vm.ProgramCounter, Is.EqualTo(514));
             }
         }
@@ -781,26 +781,26 @@ namespace yac8i.tests
         [Test]
         public void TestLDDelayTimer()
         {
-            vm.registers[1] = 200;
+            vm.state.Registers[1] = 200;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF015, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.EqualTo(true));
-                Assert.That(vm.registers[1], Is.EqualTo(200));
-                Assert.That(vm.delayTimer, Is.EqualTo(200));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(200));
+                Assert.That(vm.state.DelayTimer, Is.EqualTo(200));
             }
         }
 
         [Test]
         public void TestLDSoundTimer()
         {
-            vm.registers[1] = 200;
+            vm.state.Registers[1] = 200;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF018, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.EqualTo(true));
-                Assert.That(vm.registers[1], Is.EqualTo(200));
-                Assert.That(vm.soundTimer, Is.EqualTo(200));
+                Assert.That(vm.state.Registers[1], Is.EqualTo(200));
+                Assert.That(vm.state.SoundTimer, Is.EqualTo(200));
             }
         }
         
@@ -808,41 +808,41 @@ namespace yac8i.tests
         [TestCase((byte)0xFF, (ushort)0x0FFF, true, (ushort)0x10FE, Description = "Overflow")]
         public void TestADDI(byte regValue, ushort iRegisterValue, bool overflow, ushort result)
         {
-            vm.registers[1] = regValue;
-            vm.IRegister = iRegisterValue;
+            vm.state.Registers[1] = regValue;
+            vm.state.IRegister = iRegisterValue;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF01E, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.EqualTo(true));
-                Assert.That(vm.IRegister, Is.EqualTo(result));
-                Assert.That(vm.registers[0xF], overflow ? Is.EqualTo(1) : Is.EqualTo(0));
+                Assert.That(vm.state.IRegister, Is.EqualTo(result));
+                Assert.That(vm.state.Registers[0xF], overflow ? Is.EqualTo(1) : Is.EqualTo(0));
             }
         }
 
         [Test]
         public void TestLDFont()
         {
-            vm.registers[1] = 2;
+            vm.state.Registers[1] = 2;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF029, 0x0100);
             using (Assert.EnterMultipleScope())
             {
                 Assert.That(shouldIncrementPC, Is.EqualTo(true));
-                Assert.That(vm.IRegister, Is.EqualTo(10));
+                Assert.That(vm.state.IRegister, Is.EqualTo(10));
             }
         }
 
         [Test]
         public void TestBCD()
         {
-            vm.registers[1] = 123;
-            vm.IRegister = 512;
+            vm.state.Registers[1] = 123;
+            vm.state.IRegister = 512;
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF033, 0x0100);
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(shouldIncrementPC, Is.EqualTo(true));
-                Assert.That(vm.memory[vm.IRegister], Is.EqualTo(1));
-                Assert.That(vm.memory[vm.IRegister + 1], Is.EqualTo(2));
-                Assert.That(vm.memory[vm.IRegister + 2], Is.EqualTo(3));
+                Assert.That(shouldIncrementPC, Is.True);
+                Assert.That(vm.state.Memory[vm.state.IRegister], Is.EqualTo(1));
+                Assert.That(vm.state.Memory[vm.state.IRegister + 1], Is.EqualTo(2));
+                Assert.That(vm.state.Memory[vm.state.IRegister + 2], Is.EqualTo(3));
             }
         }
 
@@ -854,9 +854,9 @@ namespace yac8i.tests
             ushort baseIRegisterValue = 512;
             for (registersCount = 0; registersCount < registers.Length; registersCount++)
             {
-                vm.registers[registersCount] = registers[registersCount];
+                vm.state.Registers[registersCount] = registers[registersCount];
             }
-            vm.IRegister = baseIRegisterValue;
+            vm.state.IRegister = baseIRegisterValue;
             ushort args = (ushort)((registers.Length - 1) << 8);
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF055, args);
             using (Assert.EnterMultipleScope())
@@ -864,12 +864,12 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.EqualTo(true));
                 for (int i = 0; i < registersCount; i++)
                 {
-                    Assert.That(vm.memory[baseIRegisterValue + i], Is.EqualTo(registers[i]));
+                    Assert.That(vm.state.Memory[baseIRegisterValue + i], Is.EqualTo(registers[i]));
                 }
-                Assert.That(vm.IRegister, Is.EqualTo(baseIRegisterValue + registersCount));
-                for (int i = vm.IRegister; i < vm.IRegister + 16 - registersCount; i++)
+                Assert.That(vm.state.IRegister, Is.EqualTo(baseIRegisterValue + registersCount));
+                for (int i = vm.state.IRegister; i < vm.state.IRegister + 16 - registersCount; i++)
                 {
-                    Assert.That(vm.memory[i], Is.EqualTo(0));
+                    Assert.That(vm.state.Memory[i], Is.EqualTo(0));
                 }
             }
         }
@@ -882,9 +882,9 @@ namespace yac8i.tests
             ushort baseIRegisterValue = 512;
             for (registersCount = 0; registersCount < registers.Length; registersCount++)
             {
-                vm.memory[baseIRegisterValue + registersCount] = registers[registersCount];
+                vm.state.Memory[baseIRegisterValue + registersCount] = registers[registersCount];
             }
-            vm.IRegister = baseIRegisterValue;
+            vm.state.IRegister = baseIRegisterValue;
             ushort args = (ushort)((registers.Length - 1) << 8);
 
             bool shouldIncrementPC = ExecuteSingleInstruction(0xF065, args);
@@ -893,12 +893,12 @@ namespace yac8i.tests
                 Assert.That(shouldIncrementPC, Is.EqualTo(true));
                 for (int i = 0; i < registersCount; i++)
                 {
-                    Assert.That(vm.memory[baseIRegisterValue + i], Is.EqualTo(registers[i]));
+                    Assert.That(vm.state.Memory[baseIRegisterValue + i], Is.EqualTo(registers[i]));
                 }
-                Assert.That(vm.IRegister, Is.EqualTo(baseIRegisterValue + registersCount));
-                for (int i = vm.IRegister; i < vm.IRegister + 12; i++)
+                Assert.That(vm.state.IRegister, Is.EqualTo(baseIRegisterValue + registersCount));
+                for (int i = vm.state.IRegister; i < vm.state.IRegister + 12; i++)
                 {
-                    Assert.That(vm.memory[i], Is.EqualTo(0));
+                    Assert.That(vm.state.Memory[i], Is.EqualTo(0));
                 }
             }
         }

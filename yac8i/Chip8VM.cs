@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Collections;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +13,7 @@ namespace yac8i
     {
         public event EventHandler<int> ProgramLoaded;
 
-        public bool[,] Surface => surface;
+        public bool[,] Surface => state.Surface;
 
         public event EventHandler<string> NewMessage;
 
@@ -22,21 +21,15 @@ namespace yac8i
 
         public event EventHandler Tick;
 
-        public IReadOnlyCollection<byte> Memory => memory;
+        public IReadOnlyCollection<byte> Memory => state.Memory;
 
-        public IReadOnlyCollection<byte> Registers => registers;
+        public IReadOnlyCollection<byte> Registers => state.Registers;
 
-        public ushort IRegister { get; internal set; } = 0;
+        public ushort IRegister => state.IRegister;
 
-        public ushort ProgramCounter { get; private set; } = 0x200;
-
-        internal byte[] memory = new byte[4096];
+        public ushort ProgramCounter => state.ProgramCounter;
 
         internal readonly List<Instruction> instructions;
-
-        internal Stack<ushort> stack = new();
-
-        internal byte[] registers = new byte[16];
 
         internal static readonly byte[] font = [
                                     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -56,18 +49,11 @@ namespace yac8i
                                     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
                                     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
                                     ];
-        internal byte delayTimer = 0;
-
-        internal byte soundTimer = 0;
-
-        internal ushort pressedKeys = 0;
-
+        
         internal int instructionsToExecuteInFrame = 0;
 
-        internal ushort? lastPressedKey = null;
-
         internal readonly ITickTimer tickTimer;
-
+        internal readonly VmState state = new();
         private readonly ConcurrentDictionary<ushort, BreakpointInfo> breakpoints = [];
 
         private byte[] loadedProgram = null;
@@ -76,15 +62,11 @@ namespace yac8i
 
         private bool loaded = false;
 
-        private bool[,] surface = new bool[64, 32];
-
         private CancellationToken? ct;
 
         private int instructionsPerFrame = 7;
 
         private int programBytesCount = 0;
-
-        private readonly Random random = new(DateTime.Now.Second);
 
         public Chip8VM(ITickTimer tickTimer = null)
         {
@@ -96,667 +78,7 @@ namespace yac8i
             {
                 this.tickTimer = tickTimer;
             }
-            instructions =
-        [
-            // TODO: This instruction collides with 0x00EF and 0x00E0
-            //       It happens because all three instructions beings with 0
-            //       and in case of 0x0000 we are checking only top most four bits
-            //       if they are 0, then we assume we have a match
-            //       Find a way to implement this better. 
-            //new() { Opcode=0x0000,Mask=0xF000},
-            new() { Opcode=0x00E0,Mask=0xFFFF,
-            Execute = args =>
-            {
-                Array.Clear(surface);
-                return true;
-            },
-            Emit = args =>
-            {
-                return "CLS";
-            }},
-
-            new() { Opcode=0x00EE,Mask=0xFFFF,
-            Execute = args =>
-            {
-                if(this.stack.TryPop(out ushort returnAddress))
-                {
-                    this.ProgramCounter = returnAddress;
-                }
-                else
-                {
-                    throw new ArgumentException("Error. Stack empty while trying to return from subroutine");
-                }
-                return false;
-            },
-            Emit = args =>
-            {
-                return "RET";
-            }},
-
-            new() { Opcode=0x1000,Mask=0xF000,
-            Execute = args =>
-            {
-                    this.ProgramCounter = Instruction.NNN(args);
-                    return false;
-            },
-            Emit = args=>
-            {
-                return $"JP 0x{Instruction.NNN(args):X4}";
-            }},
-
-            new() { Opcode=0x2000,Mask=0xF000,
-            Execute = args =>
-            {
-                this.stack.Push((ushort)(ProgramCounter+2));
-                this.ProgramCounter = Instruction.NNN(args);
-
-                return false;
-            },
-            Emit = args=>
-            {
-                return $"CALL 0x{Instruction.NNN(args):X4}";
-            }
-            },
-
-            new() { Opcode=0x3000,Mask=0xF000,
-            Execute = args =>
-            {
-                byte registerIndex = Instruction.X(args);
-                CheckRegisterIndex(registerIndex);
-                byte registerValue = registers[registerIndex];
-                byte compareToValue = Instruction.NN(args);
-                bool valuesEqual = registerValue == compareToValue;
-                if(valuesEqual)
-                {
-                    ProgramCounter+= 4;
-                }
-                return !valuesEqual;
-            },
-            Emit = args =>
-            {
-                return $"SE V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
-            }
-            },
-
-            new() { Opcode=0x4000,Mask=0xF000,
-            Execute = args =>
-            {
-                byte registerIndex = Instruction.X(args);
-                CheckRegisterIndex(registerIndex);
-                byte registerValue = registers[registerIndex];
-                byte compareToValue = Instruction.NN(args);
-                bool valuesEqual = registerValue == compareToValue;
-                if(!valuesEqual)
-                {
-                    ProgramCounter+= 4;
-                }
-                return valuesEqual;
-            },
-            Emit = args =>
-            {
-                return $"SNE V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
-            }},
-
-            new() { Opcode=0x5000,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
-                if(valuesEqual)
-                {
-                    ProgramCounter +=4;
-                }
-                return !valuesEqual;
-            },
-            Emit = args =>
-            {
-                return $"SE V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x6000,Mask=0xF000,
-            Execute = args =>
-            {
-                byte registerIndex  = Instruction.X(args);
-                CheckRegisterIndex(registerIndex);
-                byte newRegisterValue =  Instruction.NN(args);
-                registers[registerIndex] = newRegisterValue;
-                return true;
-            },
-            Emit = args=>
-            {
-                return $"LD V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
-
-            }},
-
-            new() { Opcode=0x7000,Mask=0xF000,
-            Execute = args =>
-            {
-                int registerIndex  =  Instruction.X(args);
-                CheckRegisterIndex(registerIndex);
-                byte valueToAdd =  Instruction.NN(args);
-                registers[registerIndex] += valueToAdd; //this will wrap if overflow happens. Not sure if that is correct behavior. 
-                return true;
-
-            },
-            Emit = args=>
-            {
-                return $"ADD V{Instruction.X(args)}, 0x{Instruction.NN(args):X4}";
-            }},
-
-            new() { Opcode=0x8000,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                registers[registerXIndex] = registers[registerYIndex];
-                return true;
-            },
-            Emit = args=>
-            {
-                return $"LD V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8001,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                registers[registerXIndex] = (byte)(registers[registerXIndex] | registers[registerYIndex]);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"OR V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8002,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                registers[registerXIndex] = (byte)(registers[registerXIndex] & registers[registerYIndex]);
-                return true;
-
-            },
-            Emit = args =>
-            {
-                return $"AND V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8003,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                registers[registerXIndex] = (byte)(registers[registerXIndex] ^ registers[registerYIndex]);
-                return true;
-
-            },
-            Emit= args =>
-            {
-                return $"XOR V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8004,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                byte xValue = registers[registerXIndex];
-                byte yValue = registers[registerYIndex];
-                var result = xValue + yValue;
-                registers[registerXIndex] = (byte)result;
-                
-                //TODO: find better way to check and do this?
-                if(result > 255)
-                {
-                    registers[0xF] = 1;
-                }
-                else
-                {
-                    registers[0xF] = 0;
-                }
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"ADD V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8005,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                byte xValue = registers[registerXIndex];
-                byte yValue = registers[registerYIndex];
-                //perform subtraction (no need to worry about underflow here)
-                registers[registerXIndex] = (byte)(xValue - yValue);
-                registers[0xF] = (byte)(xValue>yValue ? 1 : 0);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"SUB V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8006,Mask=0xF00F,
-            Execute = args =>
-            {
-                //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
-                //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
-                //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                registers[registerXIndex] = registers[registerYIndex];
-                byte xValue = registers[registerXIndex];
-                
-                //right shift Vx by one
-                registers[registerXIndex] = (byte)(xValue >>1);
-                //set VF register
-                registers[0xF] =(byte)(xValue & 0x1);
-
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"SHR V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x8007,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-
-                byte xValue = registers[registerXIndex];
-                byte yValue = registers[registerYIndex];
-                //perform substraction (no need to worry about underflow here)
-                registers[registerXIndex] = (byte)(yValue - xValue);
-                registers[0xF] = (byte)(xValue<yValue ? 1 : 0);
-                return true;
-
-            },
-            Emit = args =>
-            {
-                return $"SUBN V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x800E,Mask=0xF00F,
-            Execute = args =>
-            {
-                //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
-                //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
-                //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                registers[registerXIndex] = registers[registerYIndex];
-                byte xValue = registers[registerXIndex];
-                
-                //left shift Vx by one
-                registers[registerXIndex] = (byte)(xValue <<1);
-                registers[0xF] =(byte)((xValue & 0x80) >>7);
-                return true;
-
-            },
-            Emit = args =>
-            {
-                return $"SHL V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0x9000,Mask=0xF00F,
-            Execute = args =>
-            {
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                bool valuesEqual = registers[registerXIndex] == registers[registerYIndex];
-                if(!valuesEqual)
-                {
-                    ProgramCounter +=4;
-                }
-                return valuesEqual;
-
-            },
-            Emit = args =>
-            {
-                return $"SNE V{Instruction.X(args)}, V{Instruction.Y(args)}";
-            }},
-
-            new() { Opcode=0xA000,Mask=0xF000,
-            Execute = args =>
-            {
-                IRegister = Instruction.NNN(args);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"LD I, 0x{Instruction.NNN(args)}";
-            }},
-
-            new() { Opcode=0xB000,Mask=0xF000,
-            Execute = args =>
-            {
-
-                //TODO: Implement some kind of switch that will enable user to use either CHIP-48 and SUPER-CHIP version or original 
-                //       COSMAC VIP version. Currently CHIP-48 and SUPER-CHIP version is implemented.
-                //       More here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#8xy6-and-8xye-shift
-                ushort jumpOffset = registers[0];
-                ushort jumpBase = Instruction.NNN(args);
-
-                ProgramCounter = (ushort)(jumpBase + jumpOffset);
-
-                return false;
-            },
-            Emit = args =>
-            {
-                return $"JP V0, 0x{Instruction.NNN(args)}";
-            }},
-
-            new() { Opcode=0xC000,Mask=0xF000,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                byte nnArgs = Instruction.NN(args);
-                byte[] random = new byte[1];
-                this.random.NextBytes(random);
-                registers[registerXIndex] = (byte)(random[0] & nnArgs);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"RND V{Instruction.X(args)}, 0x{Instruction.NN(args)}";
-            }},
-
-            new() { Opcode=0xD000,Mask=0xF000,
-            Execute = args =>
-            {
-                registers[0xF] = 0;
-                byte registerXIndex = Instruction.X(args);
-                byte registerYIndex = Instruction.Y(args);
-                int spriteLength = Instruction.N(args);
-                CheckRegisterIndex(registerXIndex);
-                CheckRegisterIndex(registerYIndex);
-                byte xPosition = registers[registerXIndex];
-                byte yPosition = registers[registerYIndex];
-                byte[] sprite = memory.Skip(IRegister)
-                                      .Take(spriteLength)
-                                      .ToArray();
-                int rowBeginning = xPosition % 64;
-                int y = yPosition % 32;
-                int x = rowBeginning;
-
-                for(int i = 0; i < sprite.Length;i++)
-                {
-                        BitArray spriteRow = new(new byte[] {sprite[i]});
-                        if(y < surface.GetLength(1))
-                        {
-                            for(int rowBitIndex = spriteRow.Length - 1; rowBitIndex >=0 ; rowBitIndex--)
-                            {
-                                var bit = spriteRow[rowBitIndex];
-                                if (x < surface.GetLength(0))
-                                {
-                                        if(surface[x,y] && bit)
-                                        {
-                                            surface[x,y] = false;
-                                            registers[0xF] = 1;
-                                        }
-                                        else if(!surface[x,y] && bit)
-                                        {
-                                            surface[x,y] = true;
-                                        }
-                                     x += 1;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                            x = rowBeginning;
-                            y += 1;
-                        }
-                        else
-                        {
-                            break;
-                        }
-
-                }
-               return true;
-            },
-            Emit= args =>
-            {
-                return $"DRW V{Instruction.X(args)}, V{Instruction.Y(args)}, 0x{Instruction.N(args)}";
-            }},
-
-            new() { Opcode=0xE09E,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                byte keyIndex = registers[registerXIndex];
-                if(keyIndex > 0xF)
-                {
-                    throw new ArgumentException($"Max argument value exceeded: {keyIndex}");
-                }
-
-                if((pressedKeys & (ushort)(1 << keyIndex)) > 0)
-                {
-                    ProgramCounter += 4;
-                }
-                else
-                {
-                    ProgramCounter += 2;
-                }
-                return false;
-            },
-            Emit= args =>
-            {
-                return $"SKP V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xE0A1,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                byte keyIndex = registers[registerXIndex];
-                if(keyIndex > 0xF)
-                {
-                    throw new ArgumentException($"Max argument value exceeded: {keyIndex}");
-                }
-
-                if((pressedKeys & (ushort)(1 << keyIndex)) == 0)
-                {
-                    ProgramCounter += 4;
-                }
-                else
-                {
-                    ProgramCounter += 2;
-                }
-                return false;
-
-            },
-            Emit = args =>
-            {
-                return $"SKNP V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF007,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                registers[registerXIndex] = delayTimer;
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"LD V{Instruction.X(args)}, DT";
-            }},
-
-            new() { Opcode=0xF00A,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-
-                if(lastPressedKey.HasValue)
-                {
-                    registers[registerXIndex] = (byte)lastPressedKey.Value;
-                    ProgramCounter+=2;
-                    lastPressedKey = null;
-                }
-
-                return false;
-            },
-            Emit = args =>
-            {
-                return $"LD V{Instruction.X(args)}, K";
-            }},
-
-            new() { Opcode=0xF015,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                delayTimer = registers[registerXIndex] ;
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"LD DT, V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF018,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                soundTimer = registers[registerXIndex] ;
-                return true;
-            },
-            Emit =args =>
-            {
-                return $"LD ST V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF01E,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                byte registerValue = registers[registerXIndex];
-                IRegister += registerValue;
-
-                //TODO: not original behavior of the instruction (at least not in relation to COSMAC VIP)
-                //      might be a good idea to put some kind of switch to decide what should happen.
-                //      more here: https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#fx1e-add-to-index
-                if((IRegister & 0xF000) > 0)
-                {
-                    registers[0xF] = 1;
-                }
-                return true;
-            },
-            Emit = args=>
-            {
-                return $"ADD I, V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF029,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                byte registerValue = registers[registerXIndex];
-                IRegister = (ushort)(registerValue * 5);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"LD F, V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF033,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int registerXIndex = Instruction.X(args);
-                CheckRegisterIndex(registerXIndex);
-                byte registerValue = registers[registerXIndex];
-
-                for(int i =2;i>=0;i--)
-                {
-                    CheckMemoryAdders(IRegister + i);
-                    memory[IRegister + i]= (byte)(registerValue % 10);
-                    registerValue = (byte)(registerValue / 10);
-                }
-
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"BCD V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF055,Mask=0xF0FF,
-            Execute = args =>
-            {
-                int lastRegisterIndex = Instruction.X(args);
-                CheckRegisterIndex(lastRegisterIndex);
-
-                for(int i=0;i<=lastRegisterIndex;i++)
-                {
-                    CheckMemoryAdders(IRegister + i);
-                    memory[IRegister + i] = registers[i];
-                }
-                IRegister += (ushort)(lastRegisterIndex +1);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"LD [I], V{Instruction.X(args)}";
-            }},
-
-            new() { Opcode=0xF065,Mask=0xF0FF, Execute = args =>
-            {
-                int lastRegisterIndex = Instruction.X(args);
-                CheckRegisterIndex(lastRegisterIndex);
-                for(int i=0;i<=lastRegisterIndex;i++)
-                {
-                    CheckMemoryAdders(IRegister + i);
-                    registers[i] = memory[IRegister + i];
-                }
-                IRegister += (ushort)(lastRegisterIndex +1);
-                return true;
-            },
-            Emit = args =>
-            {
-                return $"LD V{Instruction.X(args)}, [I]";
-            }},
-        ];
-
+            instructions = InstructionsFactory.GetInstructions(this.state);
             if (instructions.Count != instructions.DistinctBy(item => item.Opcode).Count())
             {
                 throw new InvalidOperationException("Duplicates found in instruction set.");
@@ -796,17 +118,17 @@ namespace yac8i
                     if (result)
                     {
                         beepStatus = restoredState.BeepStatus;
-                        delayTimer = restoredState.DelayTimer;
+                        state.DelayTimer = restoredState.DelayTimer;
                         instructionsPerFrame = restoredState.InstructionsPerFrame;
                         instructionsToExecuteInFrame = restoredState.InstructionsToExecuteInFrame;
-                        IRegister = restoredState.IRegister;
-                        memory = (byte[])restoredState.Memory.Clone();
+                        state.IRegister = restoredState.IRegister;
+                        state.Memory = (byte[])restoredState.Memory.Clone();
                         programBytesCount = restoredState.ProgramBytesCount;
-                        ProgramCounter = restoredState.ProgramCounter;
-                        registers = (byte[])restoredState.Registers.Clone();
-                        stack = new Stack<ushort>(restoredState.Stack.Reverse());
-                        soundTimer = restoredState.SoundTimer;
-                        surface = (bool[,])restoredState.Surface.Clone();
+                        state.ProgramCounter = restoredState.ProgramCounter;
+                        state.Registers = (byte[])restoredState.Registers.Clone();
+                        state.Stack = new Stack<ushort>(restoredState.Stack.Reverse());
+                        state.SoundTimer = restoredState.SoundTimer;
+                        state.Surface = (bool[,])restoredState.Surface.Clone();
                     }
                     else
                     {
@@ -834,18 +156,18 @@ namespace yac8i
             VmSerializableState state = new()
             {
                 BeepStatus = beepStatus,
-                DelayTimer = delayTimer,
+                DelayTimer = this.state.DelayTimer,
                 InstructionsPerFrame = instructionsPerFrame,
                 InstructionsToExecuteInFrame = instructionsToExecuteInFrame,
-                IRegister = IRegister,
-                Memory = (byte[])memory.Clone(),
+                IRegister = this.state.IRegister,
+                Memory = (byte[])this.state.Memory.Clone(),
                 LoadedProgram = (byte[])loadedProgram.Clone(),
                 ProgramBytesCount = programBytesCount,
                 ProgramCounter = ProgramCounter,
-                Registers = (byte[])registers.Clone(),
-                Stack = new Stack<ushort>(stack.Reverse()),
-                SoundTimer = soundTimer,
-                Surface = (bool[,])surface.Clone(),
+                Registers = (byte[])this.state.Registers.Clone(),
+                Stack = new Stack<ushort>(this.state.Stack.Reverse()),
+                SoundTimer = this.state.SoundTimer,
+                Surface = (bool[,])this.state.Surface.Clone(),
             };
 
             if (startTimer)
@@ -870,8 +192,8 @@ namespace yac8i
 
         public async Task LoadAsync(Stream program)
         {
-            programBytesCount = await program.ReadAsync(memory.AsMemory(512, memory.Length - 512));
-            loadedProgram = (byte[])memory.Clone();
+            programBytesCount = await program.ReadAsync(state.Memory.AsMemory(512, state.Memory.Length - 512));
+            loadedProgram = (byte[])state.Memory.Clone();
 
             loaded = true;
             ProgramLoaded?.Invoke(this, programBytesCount);
@@ -883,8 +205,8 @@ namespace yac8i
             {
                 using (FileStream programSourceStreamReader = new(programSourceFilePath, FileMode.Open))
                 {
-                    programBytesCount = programSourceStreamReader.Read(memory, 512, memory.Length - 512);
-                    loadedProgram = (byte[])memory.Clone();
+                    programBytesCount = programSourceStreamReader.Read(state.Memory, 512, state.Memory.Length - 512);
+                    loadedProgram = (byte[])state.Memory.Clone();
                 }
                 loaded = true;
                 ProgramLoaded?.Invoke(this, programBytesCount);
@@ -944,16 +266,8 @@ namespace yac8i
             tickTimer.Stop();
             tickTimer.Elapsed -= OnTick;
             programBytesCount = 0;
-
-            ProgramCounter = 0x200;
-            IRegister = 0;
-            soundTimer = 0;
-            delayTimer = 0;
-            stack.Clear();
-            Array.Clear(surface);
-            Array.Clear(memory);
-            Array.Clear(registers);
-            Array.Copy(font, memory, font.Length);
+            state.Clear();
+            Array.Copy(font, state.Memory, font.Length);
             ct = null;
         }
 
@@ -970,20 +284,20 @@ namespace yac8i
                 {
                     try
                     {
-                        if (soundTimer < 1)
+                        if (state.SoundTimer < 1)
                         {
-                            soundTimer = 0;
+                            state.SoundTimer = 0;
                             OnBeepStatus(false);
                         }
                         else
                         {
-                            soundTimer = (byte)(soundTimer - 1);
+                            state.SoundTimer = (byte)(state.SoundTimer - 1);
                             OnBeepStatus(true);
                         }
 
-                        if (delayTimer > 0)
+                        if (state.DelayTimer > 0)
                         {
-                            delayTimer = (byte)(delayTimer - 1);
+                            state.DelayTimer = (byte)(state.DelayTimer - 1);
                         }
                     }
                     finally
@@ -1001,13 +315,13 @@ namespace yac8i
 
             if (pressed)
             {
-                lastPressedKey = null;
-                pressedKeys |= keyBitValue;
+                state.LastPressedKey = null;
+                state.PressedKeys |= keyBitValue;
             }
             else
             {
-                lastPressedKey = key;
-                pressedKeys &= (ushort)~keyBitValue;
+                state.LastPressedKey = key;
+                state.PressedKeys &= (ushort)~keyBitValue;
             }
         }
 
@@ -1033,12 +347,12 @@ namespace yac8i
 
         public ushort GetOpcode(uint instructionAddress)
         {
-            if (memory.Length < instructionAddress + 1)
+            if (state.Memory.Length < instructionAddress + 1)
             {
                 throw new ArgumentException("Instruction address out of bounds", $"{nameof(instructionAddress)}");
             }
 
-            return (ushort)(memory[instructionAddress] << 8 | memory[instructionAddress + 1]);
+            return (ushort)(state.Memory[instructionAddress] << 8 | state.Memory[instructionAddress + 1]);
         }
 
         private bool ExecuteInstruction()
@@ -1046,7 +360,7 @@ namespace yac8i
             bool executed = false;
             try
             {
-                if (ProgramCounter < memory.Length)
+                if (ProgramCounter < state.Memory.Length)
                 {
                     if (breakpoints.TryGetValue(ProgramCounter, out var breakpointInfo))
                     {
@@ -1064,7 +378,7 @@ namespace yac8i
                     }
                     if (!breakpointInfo?.IsActive ?? true)
                     {
-                        byte[] instructionRaw = [memory[ProgramCounter], memory[ProgramCounter + 1]];
+                        byte[] instructionRaw = [state.Memory[ProgramCounter], state.Memory[ProgramCounter + 1]];
 
                         ushort instructionValue = (ushort)(instructionRaw[0] << 8 | instructionRaw[1]);
 
@@ -1078,7 +392,7 @@ namespace yac8i
                             {
                                 if (instruction.Execute(args))
                                 {
-                                    ProgramCounter += 2;
+                                    state.ProgramCounter += 2;
                                 }
                                 executed = true;
                             }
@@ -1117,20 +431,20 @@ namespace yac8i
             {
                 try
                 {
-                    if (soundTimer < 1)
+                    if (state.SoundTimer < 1)
                     {
-                        soundTimer = 0;
+                        state.SoundTimer = 0;
                         OnBeepStatus(false);
                     }
                     else
                     {
-                        soundTimer = (byte)(soundTimer - 1);
+                        state.SoundTimer = (byte)(state.SoundTimer - 1);
                         OnBeepStatus(true);
                     }
 
-                    if (delayTimer > 0)
+                    if (state.DelayTimer > 0)
                     {
-                        delayTimer = (byte)(delayTimer - 1);
+                        state.DelayTimer = (byte)(state.DelayTimer - 1);
                     }
                 }
                 finally
@@ -1151,22 +465,6 @@ namespace yac8i
             {
                 beepStatus = status;
                 Task.Run(() => BeepStatus?.Invoke(this, status));
-            }
-        }
-
-        private void CheckMemoryAdders(int memoryAddress)
-        {
-            if (memory.Length < memoryAddress)
-            {
-                throw new ArgumentOutOfRangeException($"Address {memoryAddress} out of range.");
-            }
-        }
-
-        private void CheckRegisterIndex(int registerIndex)
-        {
-            if (registerIndex > registers.Length)
-            {
-                throw new ArgumentOutOfRangeException($"Register V{registerIndex} does not exists.");
             }
         }
     }
